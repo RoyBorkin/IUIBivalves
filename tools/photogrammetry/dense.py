@@ -20,13 +20,12 @@ dist = np.array([k1, k2, 0, 0, 0])
 Ks = K.copy(); Ks[:2] *= SC
 w2, h2 = int(Wd * SC), int(H * SC)
 
-cams = []
-for n, i in enumerate(ids):
-    im = cv2.imread(str(files[i]))
-    s = Wd / max(im.shape[:2]); im = cv2.resize(im, (int(Wd), int(H)), interpolation=cv2.INTER_AREA)
-    und = cv2.undistort(im, K, dist)
-    R = cv2.Rodrigues(d['rvecs'][n])[0]; t = d['tvecs'][n]
-    cams.append(dict(i=i, img=und, small=cv2.resize(und, (w2, h2), interpolation=cv2.INTER_AREA), R=R, t=t, C=-R.T @ t, z=R[2]))
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import depthlib as DL
+SC = float(os.environ.get('SC', 0.5))
+Ks = K.copy(); Ks[:2] *= SC
+w2, h2 = int(Wd * SC), int(H * SC)
+cams, _, _, _ = DL.load_cams(d, SC)
 if os.environ.get('CAMS'):
     keepc = {int(x) for x in os.environ['CAMS'].split(',')}; cams = [c for c in cams if c['i'] in keepc]
 log(len(cams), 'cameras')
@@ -66,66 +65,20 @@ Rl = np.stack([ax, ay, up])                       # world -> local
 HALF = 0.75 * Dm                                  # half width of the box
 ZLO, ZHI = -0.25 * Dm, 0.9 * Dm
 
-# ── depth maps: plane sweep with ZNCC over 2-4 neighbours ──
-def view_dir(c): return c['z'] / np.linalg.norm(c['z'])
-Kinv = np.linalg.inv(Ks)
-NEARP = P[np.linalg.norm(P - center, axis=1) < 1.0 * Dm]
-WIN = 7
-def prep(img):
-    g = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY).astype(np.float32) / 255
-    return g
-for c in cams: c['g'] = prep(c['small'])
-def stats(g):
-    m = cv2.blur(g, (WIN, WIN)); m2 = cv2.blur(g * g, (WIN, WIN))
-    return m, np.maximum(m2 - m * m, 1e-6)
+# ── depth maps: plane sweep (depthlib) ──
+def view_dir(c): return c['z']
 depths = {}
 if os.path.exists(f'{OUT}/depths.npz') and '--redo' not in sys.argv:
     z_ = np.load(f'{OUT}/depths.npz'); depths = {int(k): z_[k] for k in z_.files}; depths = {k: v for k, v in depths.items() if k in {c['i'] for c in cams}}; log('cached depths', len(depths))
+MULTI = bool(os.environ.get('MULTI'))
+up_w = -np.mean([c['z'] for c in cams], 0); up_w /= np.linalg.norm(up_w)
 for a in (cams if not depths else []):
-    cand = []
-    for bcam in cams:
-        if bcam is a: continue
-        ang = np.degrees(np.arccos(np.clip(view_dir(a) @ view_dir(bcam), -1, 1)))
-        base = np.linalg.norm(a['C'] - bcam['C']) / Dm
-        if 3 < ang < (40 if SPARSE == 0 else 65) and 0.05 < base < (0.7 if SPARSE == 0 else 1.1): cand.append((abs(base - 0.25), bcam))
-    cand.sort(key=lambda x: x[0]); nb = [x[1] for x in cand[:4]]
-    if len(nb) < 2: continue
-    zc = (NEARP @ a['R'].T + a['t'])[:, 2]; zc = zc[zc > 0]
-    zlo, zhi = np.percentile(zc, 1) * 0.85, np.percentile(zc, 99) * 1.15
-    ND = 96
-    inv = np.linspace(1 / zhi, 1 / zlo, ND); dep = 1 / inv
-    ga = a['g']; ma, va = stats(ga)
-    costs = np.zeros((ND, len(nb), h2, w2), np.float32)
-    for j, bcam in enumerate(nb):
-        R_rel = bcam['R'] @ a['R'].T; t_rel = bcam['t'] - R_rel @ a['t']
-        for k, dd in enumerate(dep):
-            Hm = Ks @ (R_rel + np.outer(t_rel, [0, 0, 1]) / dd) @ Kinv
-            wb = cv2.warpPerspective(bcam['g'], Hm, (w2, h2), flags=cv2.INTER_LINEAR | cv2.WARP_INVERSE_MAP, borderValue=-1)
-            valid = wb >= 0
-            wb = np.where(valid, wb, ga)
-            mb, vb = stats(wb)
-            cov = cv2.blur(ga * wb, (WIN, WIN)) - ma * mb
-            zn = cov / np.sqrt(va * vb)
-            zn[~valid] = -1
-            costs[k, j] = 1 - zn
-    costs.sort(axis=1)
-    C = costs[:, :2].mean(1)                     # best two neighbours per pixel (occlusion robust)
-    C = np.stack([cv2.blur(ci, (3, 3)) for ci in C])
-    kbest = C.argmin(0)
-    cmin = np.take_along_axis(C, kbest[None], 0)[0]
-    # sub-plane refinement in inverse depth
-    k0 = np.clip(kbest, 1, ND - 2)
-    cm = np.take_along_axis(C, (k0 - 1)[None], 0)[0]; cp = np.take_along_axis(C, (k0 + 1)[None], 0)[0]; c0 = np.take_along_axis(C, k0[None], 0)[0]
-    den = cm - 2 * c0 + cp
-    off = np.where(den > 1e-6, 0.5 * (cm - cp) / den, 0).clip(-0.5, 0.5)
-    step = inv[1] - inv[0]
-    D = 1 / (inv[k0] + off * step)
-    ok = (cmin < (0.35 if SPARSE == 0 else 0.45)) & (va > 4e-4) & (kbest > 0) & (kbest < ND - 1)
-    D[~ok] = np.nan
-    D = D.astype(np.float32)
-    Dmf = ndimage.median_filter(np.nan_to_num(D, nan=0), 5); D[np.abs(D - Dmf) > 0.03 * Dmf] = np.nan
+    nb, zlo, zhi = DL.neighbours(a, cams, P, Ks, (w2, h2), nmax=4, amax=40 if not SPARSE else 65)
+    if len(nb) < 2: log('depth', a['i'], 'no neighbours'); continue
+    D = DL.sweep_multi(a, nb, zlo, zhi, Ks, (w2, h2), up_w=up_w) if MULTI else DL.sweep(a, nb, zlo, zhi, Ks, (w2, h2))
     depths[a['i']] = D
-    log('depth', a['i'], len(nb), 'nb, valid %.0f%%' % (100 * np.isfinite(D).mean()))
+    acc, _ = DL.score(D, a, P, Ks, (w2, h2))
+    log('depth', a['i'], len(nb), 'nb, valid %.0f%%, agrees with sparse %.0f%%' % (100 * np.isfinite(D).mean(), 100 * acc))
 
 # ── geometric consistency: keep depths that other views confirm ──
 def consistency(depths, tol=0.02):
@@ -182,6 +135,15 @@ def fuse(cen, half, zlo, zhi, NV=200, minw=3):
         upd = np.isfinite(sdf) & (sdf > -trunc)
         s_ = np.clip(sdf[upd] / trunc, -1, 1); w = wsum[upd]
         tsdf[upd] = (tsdf[upd] * w + s_) / (w + 1); wsum[upd] = w + 1
+    if os.environ.get('DEBUGFUSE'):
+        for c in cams[:8]:
+            Dmap = depths.get(c['i'])
+            if Dmap is None: continue
+            ys, xs = np.where(np.isfinite(Dmap)); zz = Dmap[ys, xs]
+            Xc = np.stack([(xs - Ks[0, 2]) / Ks[0, 0] * zz, (ys - Ks[1, 2]) / Ks[1, 1] * zz, zz], 1)
+            L_ = ((Xc - c['t']) @ c['R'] - cen) @ Rl.T
+            inb = (np.abs(L_[:, 0]) < half) & (np.abs(L_[:, 1]) < half) & (L_[:, 2] > zlo) & (L_[:, 2] < zhi)
+            log('  cam', c['i'], 'depth px', len(zz), 'inside box', int(inb.sum()))
     T = tsdf.reshape(NV, NV, nz); Wg = wsum.reshape(NV, NV, nz)
     log('fuse NV', NV, 'seen>=minw %.2f%%' % (100 * (Wg >= minw).mean()), 'neg %.2f%%' % (100 * ((T < 0) & (Wg >= minw)).mean()), 'pos %.2f%%' % (100 * ((T > 0) & (Wg >= minw)).mean()))
     mask = ndimage.binary_dilation(Wg >= minw, iterations=1)
@@ -234,56 +196,37 @@ def fill(col, wt, faces, n):
     col[s == 0] = np.median(col[s > 0], 0)
     return col, seen
 
-# ── locate the colony: cream blobs from every photo vote in 3D ──
+# ── locate the colony: each photo's central cream blob, lifted to 3D through the depth maps ──
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import mask_lib
+from scipy.spatial import cKDTree
+import scipy.sparse as sp
 cell = 0.02 * Dm
-votes = {}; views = {}
+pts_c, src_c = [], []
 for c in cams:
     Dmap = depths.get(c['i'])
     if Dmap is None: continue
-    m = mask_lib.cream_mask(c['small'])
-    n_, lab_, st, cen_ = cv2.connectedComponentsWithStats(m)
-    for j in range(1, n_):
-        if st[j, 4] < 0.004 * w2 * h2: continue
-        dctr = np.hypot((cen_[j, 0] - w2 / 2) / w2, (cen_[j, 1] - h2 / 2) / h2)
-        wgt = 1 / (0.12 + dctr)
-        ys, xs = np.where(lab_ == j)
-        sel = slice(None, None, max(1, len(xs) // 1500)); ys, xs = ys[sel], xs[sel]
-        z = Dmap[ys, xs]; ok = np.isfinite(z)
-        if ok.sum() < 30: continue
-        Xc = np.stack([(xs[ok] - Ks[0, 2]) / Ks[0, 0] * z[ok], (ys[ok] - Ks[1, 2]) / Ks[1, 1] * z[ok], z[ok]], 1)
-        Xw = (Xc - c['t']) @ c['R']
-        g = map(tuple, np.floor((Xw - center) / cell).astype(int))
-        pw = wgt / ok.sum()
-        for gg in g:
-            votes[gg] = votes.get(gg, 0) + pw; views.setdefault(gg, set()).add(c['i'])
-keys = np.array(list(votes)); vals = np.array([votes[tuple(k)] * len(views[tuple(k)]) for k in keys])
-thr = np.percentile(vals, 60)
-strong = {tuple(k) for k, v in zip(keys, vals) if v >= thr}
-# connected components over 26-neighbourhood
-labd = {}; comps = []
-for k in strong:
-    if k in labd: continue
-    stack = [k]; labd[k] = len(comps); members = [k]
-    while stack:
-        q = stack.pop()
-        for dx in (-1, 0, 1):
-            for dy in (-1, 0, 1):
-                for dz in (-1, 0, 1):
-                    nk = (q[0] + dx, q[1] + dy, q[2] + dz)
-                    if nk in strong and nk not in labd: labd[nk] = labd[k]; stack.append(nk); members.append(nk)
-    comps.append(members)
-score = [sum(votes[k] * len(views[k]) for k in cm) for cm in comps]
-best = comps[int(np.argmax(score))]
-bp = (np.array(best) + 0.5) * cell + center
-bw = np.array([votes[k] for k in best])
-cw = (bp * bw[:, None]).sum(0) / bw.sum()
+    tb = mask_lib.target_blob(c['small'])
+    if tb is None: continue
+    ys, xs = np.where(tb > 0)
+    z = Dmap[ys, xs]; ok = np.isfinite(z)
+    if ok.sum() < 20: continue
+    sel = np.where(ok)[0][:: max(1, ok.sum() // 1500)]
+    Xc = np.stack([(xs[sel] - Ks[0, 2]) / Ks[0, 0] * z[sel], (ys[sel] - Ks[1, 2]) / Ks[1, 1] * z[sel], z[sel]], 1)
+    pts_c.append((Xc - c['t']) @ c['R']); src_c.append(np.full(len(sel), c['i']))
+pts_c = np.vstack(pts_c); src_c = np.concatenate(src_c)
+pr = cKDTree(pts_c).query_pairs(0.03 * Dm, output_type='ndarray')
+G_ = sp.coo_matrix((np.ones(len(pr)), (pr[:, 0], pr[:, 1])), shape=(len(pts_c),) * 2)
+_, lb_ = sp.csgraph.connected_components(G_, directed=False)
+# the colony = the cluster seen from the most photos
+score_ = {L: len(set(src_c[lb_ == L])) * 1e6 + (lb_ == L).sum() for L in np.unique(lb_)}
+Lb = max(score_, key=score_.get)
+cp_ = pts_c[lb_ == Lb]
+cw = np.median(cp_, 0)
 cc = (cw - center) @ Rl.T
-rad = np.percentile(np.linalg.norm((bp - cw) @ Rl.T, axis=1), 95)
-nviews = len(set().union(*[views[k] for k in best]))
-log('colony from %d views, %d voxels, centre %s, radius %.3f (%.3f Dm), score share %.2f' % (nviews, len(best), cc.round(2), rad, rad / Dm, max(score) / sum(score)))
-colony_cells = set(best)
+rad = np.percentile(np.linalg.norm((cp_ - cw) @ Rl.T, axis=1), 95)
+log('colony from %d views, %d points, radius %.3f (%.3f Dm)' % (len(set(src_c[lb_ == Lb])), len(cp_), rad, rad / Dm))
+colony_cells = {tuple(g) for g in np.floor((cp_ - center) / cell).astype(int)}
 
 if os.environ.get('HF'):
     # ── height-field surface for sparse sets ──
@@ -403,6 +346,39 @@ if os.environ.get('HF'):
     np.savez(f'{OUT}/mesh.npz', verts=verts, faces=faces, normals=normals, cols=col.astype(np.float32), Dm=Dm,
              rad=rad, center=cw0, Rl=R2, hsv=hsv, colony=colony)
     sys.exit(0)
+
+if os.environ.get('HIRES'):
+    # ── second depth pass: full resolution, only around the colony, depths near it only ──
+    cl_ = cv2.createCLAHE(2.0, (8, 8))
+    HSC = float(os.environ.get('HSC', 1.0)); HWIN = int(os.environ.get('HWIN', 11))
+    KF = K.copy(); KF[:2] *= HSC; WF, HF_ = int(Wd * HSC), int(H * HSC)
+    for c in cams:
+        c['gF'] = cl_.apply(cv2.cvtColor(cv2.resize(c['img'], (WF, HF_), interpolation=cv2.INTER_AREA), cv2.COLOR_BGR2GRAY)).astype(np.float32) / 255
+    hi = {}
+    for a in cams:
+        Pa = a['R'] @ cw + a['t']
+        if Pa[2] <= 0: continue
+        u0 = KF[0, 0] * Pa[0] / Pa[2] + KF[0, 2]; v0 = KF[1, 1] * Pa[1] / Pa[2] + KF[1, 2]
+        rpx = KF[0, 0] * rad / Pa[2] * 2.6
+        x0, x1 = int(max(0, u0 - rpx)), int(min(WF, u0 + rpx)); y0, y1 = int(max(0, v0 - rpx)), int(min(HF_, v0 + rpx))
+        if x1 - x0 < 40 or y1 - y0 < 40: continue
+        nb, _, _ = DL.neighbours(a, cams, P, Ks, (w2, h2), nmax=5, amax=40 if not SPARSE else 65)
+        nb = [b for b in nb if (b['R'] @ cw + b['t'])[2] > 0]
+        if len(nb) < 2: continue
+        Kc_ = KF.copy(); Kc_[0, 2] -= x0; Kc_[1, 2] -= y0
+        ac = dict(g=a['gF'][y0:y1, x0:x1], R=a['R'], t=a['t'])
+        nbF = [dict(g=b['gF'], R=b['R'], t=b['t']) for b in nb]
+        zlo_, zhi_ = Pa[2] - 3.0 * rad, Pa[2] + 3.0 * rad
+        Dc = DL.sweep(ac, nbF, max(zlo_, 0.2 * Pa[2]), zhi_, Kc_, (x1 - x0, y1 - y0), ND=160, WIN=HWIN, Kn=KF, amb=0.03, cmax=0.45)
+        full = np.full((HF_, WF), np.nan, np.float32); full[y0:y1, x0:x1] = Dc
+        hi[a['i']] = full
+        log('hi-res depth', a['i'], 'window %dx%d' % (x1 - x0, y1 - y0), 'valid %.0f%%' % (100 * np.isfinite(Dc).mean()))
+    np.savez_compressed(f'{OUT}/hires_raw.npz', **{str(k): v for k, v in hi.items()})
+    # from here on, depth maps are full resolution
+    Ks = KF; w2, h2 = WF, HF_; SC = HSC
+    depths = consistency(hi, 0.015 if not SPARSE else 0.02)
+    depths = {k_: densify(v_, 7) for k_, v_ in depths.items()}
+    log('consistent hi-res depth: ' + ' '.join('%d:%.0f%%' % (k, 100 * np.isfinite(v).mean()) for k, v in depths.items()))
 
 # ── pass 2: fine, around the colony ──
 _pts = []

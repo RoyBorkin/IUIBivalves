@@ -155,14 +155,14 @@ export const POINTS = [
     photos: [],
   },
   {
-    // two thirds of the way from the pier to the Habitat, towards the deep water
+    // two thirds of the way from the pier to the Habitat, then 10 m further out from the shore
     id: 'frame', name: 'גליל במסגרת',
-    en: {name: "Cylinder in a frame", terrain: "Sand and rubble", dimsText: "Cylinder 50 cm across, frame 3 × 3 m", note: "A cylinder 50 cm across lying in the middle of a 3 × 3 m frame, two thirds of the way from the pier to the Habitat. Both dives started here."},
-    lat: [29, 30.0827], lon: [34, 55.0470],
+    en: {name: "Cylinder in a frame", terrain: "Sand and rubble", dimsText: "Cylinder 50 cm across, frame 3 × 3 m", note: "A cylinder 50 cm across lying in the middle of a 3 × 3 m frame, two thirds of the way from the pier to the Habitat and 10 m further out from the shore. Both dives started here."},
+    lat: [29, 30.0785], lon: [34, 55.0509],
     depth: [9], dims: [3, 3, 0.5], dimsText: 'גליל בקוטר 50 ס״מ, מסגרת 3 × 3 מ׳', shape: 'box',
     terrain: 'חול ודרדרת', material: '',
     entry: true,
-    note: 'גליל בקוטר 50 ס״מ ששוכב במרכז מסגרת של 3 × 3 מטר, שני שליש מהדרך מהמזח להביטט. משם יצאנו לשתי הצלילות.',
+    note: 'גליל בקוטר 50 ס״מ ששוכב במרכז מסגרת של 3 × 3 מטר, שני שליש מהדרך מהמזח להביטט, ועוד 10 מטר הלאה מהחוף. משם יצאנו לשתי הצלילות.',
     photos: [], model: 'frameCyl',
   },
 ];
