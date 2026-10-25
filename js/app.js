@@ -778,10 +778,26 @@ function shorePoint(t, s) {
   const k = (lo + hi) / 2;
   return { e: be + SEAWARD.e * k, n: bn + SEAWARD.n * k };
 }
-const zones = Object.entries(ZONES).map(([key, z]) => {
+// each pair's search area is fitted to the corals that pair actually marked:
+// along the shore and out from it, with a margin; where the pairs meet, the line runs midway between them
+const ZONE_FIT = (() => {
+  const M = 3, out = {};
+  Object.keys(ZONES).forEach((key) => {
+    const cs = PLACED.filter((c) => c.pair === key);
+    if (!cs.length) { const z = ZONES[key]; out[key] = { t0: CAM.t + z.along[0], t1: CAM.t + z.along[1], s0: CAM.s + z.across[0], s1: CAM.s + z.across[1] }; return; }
+    out[key] = { t0: Math.min(...cs.map((c) => c.t)) - M, t1: Math.max(...cs.map((c) => c.t)) + M, s0: Math.min(...cs.map((c) => c.s)) - M, s1: Math.max(...cs.map((c) => c.s)) + M };
+  });
+  const N = out.north, S = out.south, nc = PLACED.filter((c) => c.pair === 'north'), sc = PLACED.filter((c) => c.pair === 'south');
+  if (N && S && nc.length && sc.length && S.t1 > N.t0) {
+    const mid = (Math.max(...sc.map((c) => c.t)) + Math.min(...nc.map((c) => c.t))) / 2;
+    S.t1 = mid; N.t0 = mid;
+  }
+  return out;
+})();
+const zones = Object.keys(ZONES).map((key) => {
   const col = new THREE.Color(PAIRS[key].color);
-  const t0 = CAM.t + z.along[0], t1 = CAM.t + z.along[1];
-  const s0 = Math.max(2, CAM.s + z.across[0]), s1 = CAM.s + z.across[1];
+  const { t0, t1 } = ZONE_FIT[key];
+  const s0 = Math.max(1, ZONE_FIT[key].s0), s1 = ZONE_FIT[key].s1;
   const NT = 30, NS = 8;
   const verts = [], idx = [];
   for (let i = 0; i <= NT; i++) {
@@ -813,7 +829,10 @@ const zones = Object.entries(ZONES).map(([key, z]) => {
   drape(trailPts, { color: col, width: 3, dash: 2.2, gap: 1.3, role: 'trail' });
   const c = shorePoint(tm, sm);
   const poly = edge.filter((_, k) => k % 3 === 0).map((q) => toGeo(q.e, q.n));
-  return { key, col, fill, center: W(c.e, c.n, yAt(c.e, c.n) + 0.6), mid: c, poly, edge, trail: trailPts };
+  // a short area has no room for its name inside: put the name just past its far end
+  const short = t1 - t0 < 16;
+  const labelAt = short ? shorePoint(key === 'south' ? t0 - 7 : t1 + 7, sm) : c;
+  return { key, col, fill, center: W(labelAt.e, labelAt.n, yAt(labelAt.e, labelAt.n) + 0.6), mid: c, labelAt, poly, edge, trail: trailPts };
 });
 
 /* ── the marked corals: colony, anchor stone, rope and float ── */
@@ -1817,7 +1836,7 @@ function zonesFigure(found = false) {
     out += `<text class="f-zone-p" x="${lx.toFixed(1)}" y="${(q.ly + 14).toFixed(1)}" text-anchor="${anchor}" direction="ltr">${b}° · ${d} ${t('m')}</text>`;
   });
   if (!found) zones.forEach((z) => {
-    const x = X(z.mid), y = Y(z.mid);
+    const x = X(z.labelAt), y = Y(z.labelAt);
     out += `<text class="f-zone" x="${x.toFixed(1)}" y="${(y + 4).toFixed(1)}" text-anchor="middle" fill="${PAIRS[z.key].color}">${esc(pairName(z.key))}</text>`;
     out += `<text class="f-zone-p" x="${x.toFixed(1)}" y="${(y + 22).toFixed(1)}" text-anchor="middle">${esc(people(z.key))}</text>`;
   });
