@@ -249,6 +249,7 @@ export const DECKS = {
           ],
         },
         { type: 'phase', phase: 'night', title: 'תוצאות הלילה' },
+        { type: 'activityChart', title: 'יום מול לילה' },
       ],
     },
     results: {
@@ -469,6 +470,7 @@ export const DECKS = {
           ],
         },
         { type: 'phase', phase: 'night', title: 'Night results' },
+        { type: 'activityChart', title: 'Day against night' },
       ],
     },
     results: {

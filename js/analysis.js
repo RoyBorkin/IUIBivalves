@@ -142,7 +142,8 @@ export function scatter(corals, fx, fy, { rtl, xLabel, yLabel, colors, names, em
   out += `<text class="c-axis-t" x="${W / 2}" y="${H - 8}" text-anchor="middle">${esc(xLabel)}</text>`;
   pts.forEach((p) => {
     out += `<circle cx="${sx(p.x).toFixed(1)}" cy="${sy(p.y).toFixed(1)}" r="7" fill="${colors(p.c)}" stroke="#1B2F45" stroke-width="1.2"><title>${esc(names(p.c))}</title></circle>`;
-    out += `<text class="c-dot" x="${(sx(p.x) + (rtl ? -10 : 10)).toFixed(1)}" y="${(sy(p.y) + 4).toFixed(1)}" text-anchor="${rtl ? 'end' : 'start'}">${esc(names(p.c))}</text>`;
+    const toLeft = sx(p.x) > W / 2;   // labels point towards the middle, so they never run off the edge
+    out += `<text class="c-dot" x="${(sx(p.x) + (toLeft ? -10 : 10)).toFixed(1)}" y="${(sy(p.y) + 4).toFixed(1)}" text-anchor="${toLeft ? 'end' : 'start'}">${esc(names(p.c))}</text>`;
   });
   if (pts.length < 2) out += `<text class="c-empty c-empty-s" x="${W / 2}" y="${(H - B + T) / 2}" text-anchor="middle">${esc(empty)}</text>`;
   return `<figure class="scatter"><figcaption>${esc(yLabel)}</figcaption><svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(`${yLabel} / ${xLabel}`)}">${out}</svg></figure>`;

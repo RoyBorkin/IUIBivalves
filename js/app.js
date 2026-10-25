@@ -1855,9 +1855,10 @@ function diagramSVG(kind) {
 
 function stepsHTML(s) {
   return `<ol class="steps">${s.steps.map((st, i) => {
-    const time = s.schedule && st.key ? (SCHEDULE[st.key] ? num(SCHEDULE[st.key]) : t('timeTbd')) : '';
+    const mins = st.key === 'dayDive' ? SCHEDULE.dayMinutes : st.key === 'nightDive' ? SCHEDULE.nightMinutes : null;
+    const time = s.schedule && st.key && SCHEDULE[st.key] ? `${num(SCHEDULE[st.key])}${mins ? ` · ${t('minutes', mins)}` : ''}` : '';
     return `<li><span class="st-n">${i + 1}</span><div><h3>${esc(st.title)}${time ? ` <span class="st-time">${time}</span>` : ''}</h3><p>${esc(st.text)}</p></div></li>`;
-  }).join('')}</ol>${s.schedule ? `<p class="slide-note">${SCHEDULE.date ? t('dateIs', num(SCHEDULE.date)) : t('dateTbd')}</p>` : ''}`;
+  }).join('')}</ol>${s.schedule && SCHEDULE.date ? `<p class="slide-note">${t('dateIs', num(SCHEDULE.date))}</p>` : ''}`;
 }
 const cardsHTML = (s) => `<div class="cards">${s.cards.map((c) => `<section class="card"><h3>${esc(c.title)}</h3><p>${esc(c.text)}</p></section>`).join('')}</div>`;
 
@@ -1909,7 +1910,8 @@ function phaseHTML(phase) {
     return `<tr><td>${coralCell(c)}</td><td>${ph.time ? num(ph.time) : dash}</td><td>${fmt(c.holes, 0)}</td><td>${fmt(c.calc.target, 0)}</td><td>${fmt(ph.tested, 0)}</td><td>${fmt(ph.active, 0)}</td><td><b>${isNum(pc) ? num(`${Math.round(pc)}%`) : dash}</b></td></tr>`;
   }).join('');
   const h = t('phaseHead');
-  return `<div class="table-wrap"><table class="legtable data"><thead><tr>${h.map((x) => `<th>${x}</th>`).join('')}</tr></thead><tbody>${rows}</tbody></table></div>${noData()}`;
+  const start = phase === 'day' ? SCHEDULE.dayDive : SCHEDULE.nightDive, mins = phase === 'day' ? SCHEDULE.dayMinutes : SCHEDULE.nightMinutes;
+  return `${start ? `<p class="lead">${t('diveAt', num(start), mins)}</p>` : ''}<div class="table-wrap"><table class="legtable data"><thead><tr>${h.map((x) => `<th>${x}</th>`).join('')}</tr></thead><tbody>${rows}</tbody></table></div>${noData()}`;
 }
 function summaryHTML() {
   const S = summary(CORALS);
@@ -1923,7 +1925,7 @@ function summaryHTML() {
     ${tile(pc(S.dayPct), t('sDay'), 'is-day')}
     ${tile(pc(S.nightPct), t('sNight'), 'is-night')}
     ${tile(diff, t('sDiff', S.pairs))}
-  </div>${noData()}`;
+  </div>${SCHEDULE.dayDive && SCHEDULE.nightDive ? `<p class="slide-note">${t('divesLine', num(SCHEDULE.dayDive), SCHEDULE.dayMinutes, num(SCHEDULE.nightDive), SCHEDULE.nightMinutes)}</p>` : ''}${noData()}`;
 }
 function coralTableHTML() {
   const h = t('tableHead');
@@ -1961,6 +1963,7 @@ function coralCardsHTML() {
         <dt>${t('fHoles')}</dt><dd>${fmt(c.holes, 0)}</dd>
         <dt>${t('fDensity')}</dt><dd>${fmt(c.calc.density)}</dd>
         <dt>${t('fDay')}</dt><dd>${pc(c.calc.dayPct)}</dd>
+        <dt>${t('fNight')}</dt><dd>${pc(c.calc.nightPct)}</dd>
         <dt>${t('fBearing')}</dt><dd>${b}</dd>
         <dt>${t('fColor')}</dt><dd>${c.colorHex ? `<span class="swatch" style="background:${esc(c.colorHex)}"></span>` : ''}${esc(ctx(c, 'color') || '–')}</dd>
         <dt>${t('fLight')}</dt><dd>${esc(ctx(c, 'light') || '–')}</dd>

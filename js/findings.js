@@ -26,7 +26,7 @@ const empty = (id, float, pair) => ({
   surfaceCm2: null,                 // שטח פנים מהמודל התלת־ממדי (סמ"ר)
   volumeCm3: null,                  // נפח המושבה (סמ"ק)
   holes: null,                      // מספר החורים (צדפות) שנספרו באלמוג
-  day: { time: '', tested: null, active: null },   // כמה נבדקו בפלואורסצאין, כמה מהן פעילות
+  day: { time: '12:45–13:33', tested: null, active: null },   // כמה נבדקו בפלואורסצאין, כמה מהן פעילות
   night: { time: '', tested: null, active: null },
   lightLux: null, light: '', en_light: '',          // כמות האור: מדידה בלוקס ו/או תיאור (חשוף / מוצל)
   substrate: '', en_substrate: '',                  // סוג הקרקע סביב האלמוג
@@ -67,7 +67,7 @@ export const CORALS = [
     form: 'מסיבי, דמוי מוח (מאנדרואידי), מושבה קטנה', en_form: 'Massive, brain-like (meandroid), a small colony',
     color: 'קרם בהיר', en_color: 'Pale cream', colorHex: '#8F8D83',
     sizeCm: [8, null, null], surfaceCm2: dome(8), volumeCm3: domeVol(8),
-    holes: 16, day: { time: '', tested: 12, active: 7 }, night: { time: '', tested: 12, active: 8 },
+    holes: 16, day: { time: '12:45–13:33', tested: 12, active: 7 }, night: { time: '17:30–18:06', tested: 12, active: 8 },
     ...light(2),
     substrate: 'מדרון שונית סלעי, עם דרדרת ואצות שטיח', en_substrate: 'Rocky reef slope with rubble and turf algae',
     notes: 'גודל ייחוס כ־8 ס״מ (מול אצבע). בלוח נרשם אזימוט 120°.',
@@ -82,7 +82,7 @@ export const CORALS = [
     form: 'מסיבי, דמוי מוח, מוארך ומפותל', en_form: 'Massive, brain-like, elongated and winding',
     color: 'קרם־בז׳', en_color: 'Cream-beige', colorHex: '#938E7F',
     sizeCm: [15, null, null], surfaceCm2: dome(15), volumeCm3: domeVol(15),
-    holes: 20, day: { time: '', tested: 20, active: 14 }, night: { time: '', tested: 16, active: 9 },
+    holes: 20, day: { time: '12:45–13:33', tested: 20, active: 14 }, night: { time: '17:30–18:06', tested: 16, active: 9 },
     ...light(1),
     substrate: 'סלע שונית עם ספוגים כתומים מצפים', en_substrate: 'Reef rock with orange encrusting sponges',
     notes: 'גודל ייחוס כ־15 ס״מ. בלוח נרשם אזימוט 120°.',
@@ -97,7 +97,7 @@ export const CORALS = [
     form: 'מסיבי, אונות מפותלות, מושבה גדולה', en_form: 'Massive with winding lobes, a large colony',
     color: 'חום־צהבהב (אוקר)', en_color: 'Tan-ochre', colorHex: '#887E6D',
     sizeCm: [20, null, null], surfaceCm2: dome(20), volumeCm3: domeVol(20),
-    holes: 46, day: { time: '', tested: 31, active: 19 }, night: { time: '', tested: 30, active: 18 },
+    holes: 46, day: { time: '12:45–13:33', tested: 31, active: 19 }, night: { time: '17:30–18:06', tested: 30, active: 18 },
     ...light(1),
     substrate: 'משטח חול ודרדרת בין סלעים', en_substrate: 'Sand and rubble flat between rocks',
     notes: 'גודל ייחוס כ־20 ס״מ. בלוח נרשם אזימוט 130°.',
@@ -113,7 +113,7 @@ export const CORALS = [
     form: 'מסיבי, דמוי מוח, אונות עגולות', en_form: 'Massive, brain-like, rounded lobes',
     color: 'צהוב־קרם', en_color: 'Yellow-cream', colorHex: '#8A958A',
     sizeCm: [15, null, null], surfaceCm2: dome(15), volumeCm3: domeVol(15),
-    holes: 33, day: { time: '', tested: 11, active: 7 }, night: { time: '', tested: 11, active: 6 },
+    holes: 33, day: { time: '12:45–13:33', tested: 11, active: 7 }, night: { time: '17:30–18:06', tested: 11, active: 6 },
     ...light(1),
     substrate: 'משטח דרדרת וחול', en_substrate: 'Rubble and sand flat',
     notes: 'גודל ייחוס כ־15 ס״מ.',
@@ -128,7 +128,7 @@ export const CORALS = [
     form: 'מסיבי, דמוי מוח, שתי אונות', en_form: 'Massive, brain-like, two lobes',
     color: 'צהוב־קרם', en_color: 'Yellow-cream', colorHex: '#A3A08D',
     sizeCm: [23, null, null], surfaceCm2: dome(23), volumeCm3: domeVol(23),
-    holes: 36, day: { time: '', tested: 11, active: 8 }, night: { time: '', tested: 8, active: 3 },
+    holes: 36, day: { time: '12:45–13:33', tested: 11, active: 8 }, night: { time: '17:30–18:06', tested: 8, active: 3 },
     ...light(1),
     substrate: 'סלע שונית עם ספוגים כתומים, ליד אלמוגים מסתעפים', en_substrate: 'Reef rock with orange sponges, next to branching corals',
     notes: 'גודל ייחוס כ־23 ס״מ.',
@@ -171,15 +171,29 @@ export const CONCLUSIONS = {
 // מה למדנו על סימון קצר־טווח מתחת למים ועל עבודה עם יצורים חיים
 // What we learned about short-term underwater marking and working with live organisms
 export const LESSONS = {
-  he: [],
-  en: [],
+  he: [
+    'המצופים עם הסטיקלייט והמחזירים החזיקו כחמש שעות במים, מצלילת היום ועד סוף צלילת הלילה, ומצאנו בלילה את כל חמשת האלמוגים.',
+    'החיה על כל מצוף אפשרה לזהות בלילה בלי ספק לאיזה אלמוג הגענו, גם כשארבעה מהם היו במרחק של מטרים ספורים זה מזה.',
+    'מצוף קשור לאבן ליד המושבה, ולא אליה, השאיר את האלמוג בלי מגע ובלי הצללה.',
+    'בדיקת הפלואורסצאין דורשת סבלנות: בלילה בדקנו בדג הליצן רק 8 צדפות, פחות מהמספר שתכננו (12). כדאי לתכנן זמן לכל אלמוג ולבדוק קודם את המושבות הגדולות.',
+    'הנ.צ. מהשנירקול מדויקים לכמה מטרים בלבד. כדאי לרשום מתחת למים גם אזימוט ומרחק מנקודת היציאה, כגיבוי.',
+    'לפוטוגרמטריה של אלמוגי מוח: 30–40 תמונות במעגל סביב המושבה בחפיפה גדולה, ועוד כמה מלמעלה, ממרחק קבוע ועם עצם בולט ליד המושבה. לא נוגעים באלמוג ולא מעלים חול.',
+  ],
+  en: [
+    'The floats with light sticks and reflectors lasted about five hours in the water, from the day dive to the end of the night dive, and we found all five corals at night.',
+    'The animal on each float let us tell at night, without doubt, which coral we had reached, even though four of them were only a few metres apart.',
+    'Tying the float to a stone next to the colony, not to the colony itself, left the coral untouched and unshaded.',
+    'The fluorescein test takes patience: at night we tested only 8 bivalves on the clownfish coral, fewer than planned (12). Plan time for each coral and test the large colonies first.',
+    'Snorkel GPS positions are accurate to a few metres only. Also write down a bearing and distance from the start point under water, as a backup.',
+    'For photogrammetry of brain corals: 30–40 photos in a circle around the colony with plenty of overlap, plus a few from above, at a steady distance and with a clear object next to the colony. Never touch the coral or stir up sand.',
+  ],
 };
 
 // מועדי הצלילות. Dive times.
 export const SCHEDULE = {
-  date: '',          // למשל '2026-10-28'
-  dayDive: '',       // למשל '10:00'
-  snorkel: '',       // למשל '12:30'
-  nightDive: '',     // למשל '19:30'
-  sunset: '',        // למשל '17:05'
+  date: '',            // למשל '2026-10-28'
+  dayDive: '12:45',    dayMinutes: 48,
+  snorkel: '',         // אחרי צלילת היום
+  nightDive: '17:30',  nightMinutes: 36,
+  sunset: '',
 };
