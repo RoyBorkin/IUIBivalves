@@ -5,7 +5,7 @@
 
 export const SITE_URL = 'https://royborkin.github.io/IUIBivalves/';
 
-// שני הצמדים. Each pair swims from the camera, one north and one south.
+// שני הצמדים. Each pair swims from the cylinder frame, one north and one south.
 export const PAIRS = {
   north: { color: '#17837F', he: { name: 'צמד צפון', people: ['רועי', 'גאיה'] }, en: { name: 'North pair', people: ['Roy', 'Gaia'] } },
   south: { color: '#B86A12', he: { name: 'צמד דרום', people: ['מוריה', 'נעמה'] }, en: { name: 'South pair', people: ['Moriya', 'Naama'] } },
@@ -21,11 +21,23 @@ export const FLOATS = {
   turtle: { he: 'צב ים', en: 'Sea turtle' },
 };
 
-// אזורי החיפוש סביב נקודת המצלמה, במטרים: along = לאורך החוף (חיובי = צפונה),
-// across = ניצב לחוף ביחס למצלמה (חיובי = לכיוון המים העמוקים).
+// אזורי החיפוש סביב המסגרת עם הגליל, במטרים: along = לאורך החוף (חיובי = צפונה),
+// across = ניצב לחוף ביחס למסגרת (חיובי = לכיוון המים העמוקים).
 export const ZONES = {
-  north: { along: [3, 40], across: [-10, 12] },
-  south: { along: [-40, -3], across: [-10, 12] },
+  north: { along: [0, 40], across: [-10, 12] },
+  south: { along: [-40, 0], across: [-10, 12] },
+};
+
+// תמונה מהתיקייה assets/photos, עם כיתוב בעברית ובאנגלית
+const ph = (key, n, he = '', en = '') => ({ src: `assets/photos/${key}-${n}.jpg`, caption: he, en_caption: en });
+const phs = (key, ns) => ns.map((n) => ph(key, n));
+const P = {
+  shore: [...phs('teamN', [1, 3, 4]), ...phs('teamS', [1, 2])],
+  north: [...phs('teamN', [5, 6, 7]), ph('teamN', 8, 'מצוף הדולפין', 'The dolphin float'), ...phs('teamN', [11, 12, 21, 22, 23])],
+  south: phs('teamS', [3, 5, 6, 8, 10, 12, 13, 14, 15, 16, 17]),
+  fluor: [...phs('teamS', [19, 20, 21, 22]), ...phs('turtle', [36, 40, 44, 49])],
+  mark: [ph('turtle', 54, 'מצוף הצב מעל המושבה', 'The turtle float above the colony'), ph('turtle', 55, 'מצוף הצב', 'The turtle float'), ph('teamN', 8, 'מצוף הדולפין', 'The dolphin float'), ph('teamN', 7)],
+  slate: [ph('teamN', 24, 'הלוח של צמד צפון', 'The north pair’s slate')],
 };
 
 // כמה צדפות לבדוק בפלואורסצאין: שליש מהחורים, ולפחות 7.
@@ -96,17 +108,20 @@ export const DECKS = {
       slides: [
         {
           type: 'groups', title: 'שני צמדים',
-          lead: 'אנחנו ארבעה, ומתחלקים לשני צמדים. שני הצמדים יורדים בנקודת המצלמה: צמד אחד שוחה צפונה, והשני דרומה.',
+          lead: 'אנחנו ארבעה, ומתחלקים לשני צמדים. שני הצמדים יורדים במסגרת עם הגליל, בעומק 9 מ׳: צמד אחד שוחה צפונה, והשני דרומה.',
           groups: [
-            { pair: 'north', title: 'צמד צפון', sub: 'שוחים צפונה מהמצלמה', members: ['רועי', 'גאיה'] },
-            { pair: 'south', title: 'צמד דרום', sub: 'שוחים דרומה מהמצלמה', members: ['מוריה', 'נעמה'] },
+            { pair: 'north', title: 'צמד צפון', sub: 'שוחים צפונה מהמסגרת', members: ['רועי', 'גאיה'] },
+            { pair: 'south', title: 'צמד דרום', sub: 'שוחים דרומה מהמסגרת', members: ['מוריה', 'נעמה'] },
           ],
         },
+        { type: 'photos', title: 'הכנות על החוף', photos: P.shore },
+        { type: 'photos', title: 'צמד צפון במים', lead: 'רועי וגאיה סימנו את הדולפין, התמנון והצב.', photos: P.north },
+        { type: 'photos', title: 'צמד דרום במים', lead: 'מוריה ונעמה סימנו את הלוויתן ואת דג הליצן.', photos: P.south },
         {
           type: 'cards', title: 'תפקידים',
           lead: 'רועי ומוריה מנווטים ומודדים אזימוטים במצפן. את שאר המשימות מחלקים בתוך כל צמד.',
           cards: [
-            { title: 'ניווט ואזימוטים', text: 'רועי בצמד צפון, מוריה בצמד דרום: אזימוט ומרחק מהמצלמה לכל אלמוג ומאלמוג לאלמוג.' },
+            { title: 'ניווט ואזימוטים', text: 'רועי בצמד צפון, מוריה בצמד דרום: אזימוט ומרחק מהמסגרת לכל אלמוג ומאלמוג לאלמוג.' },
             { title: 'ספירה ובדיקה', text: 'ספירת החורים, ובדיקת פלואורסצאין לשליש מהם, לפחות 7.' },
             { title: 'צילום ומדידה', text: 'צילומים לכל אורך המושבה למודל התלת־ממדי, ומידות ייחוס.' },
             { title: 'סימון', text: 'מצוף בצורת חיית ים עם סטיקלייט ומחזירי אור, לפני שעוברים לאלמוג הבא.' },
@@ -129,14 +144,14 @@ export const DECKS = {
         {
           type: 'steps', title: 'סדר המשימה', schedule: true,
           steps: [
-            { key: 'dayDive', title: 'צלילת יום', text: 'יורדים בנקודת המצלמה. כל צמד מוצא 2–3 אלמוגים, מודד, בודק ומסמן.' },
+            { key: 'dayDive', title: 'צלילת יום', text: 'יורדים במסגרת עם הגליל. כל צמד מוצא 2–3 אלמוגים, מודד, בודק ומסמן.' },
             { key: 'snorkel', title: 'שנירקול', text: 'שוחים מעל כל מצוף ושומרים נ.צ. ב־GPS.' },
             { key: null, title: 'רישום', text: 'מעבירים את הנתונים מהדפים התת־ימיים לטבלה, ומוודאים שכל הסטיקלייטים דולקים.' },
             { key: 'nightDive', title: 'צלילת לילה', text: 'חוזרים לאותם אלמוגים ובודקים שוב את פעילות הצדפות.' },
             { key: null, title: 'איסוף', text: 'אוספים את כל המצופים, האבנים והסטיקלייטים.' },
           ],
         },
-        { type: 'zones', title: 'אזורי החיפוש', lead: 'נקודת הכניסה היא המצלמה התת־ימית. צמד צפון מחפש מצפון לה, וצמד דרום מדרום לה, לאורך השונית.' },
+        { type: 'zones', title: 'אזורי החיפוש', lead: 'נקודת היציאה היא גליל בקוטר 50 ס״מ במרכז מסגרת של 3 × 3 מ׳, בעומק 9 מ׳, שני שליש מהדרך מהמזח להביטט. צמד צפון מחפש מצפון לה, וצמד דרום מדרום לה, לאורך השונית.' },
         { type: 'floats', title: 'המצופים', lead: 'כל אלמוג מקבל חיה משלו, כדי שבלילה נדע בדיוק לאיזה אלמוג הגענו.' },
         { type: 'rule', title: 'כמה צדפות בודקים', lead: 'בודקים בפלואורסצאין שליש מהחורים. אם שליש יוצא פחות מ־7, בודקים 7.' },
         { type: 'sheet', title: 'דף הרישום התת־ימי', lead: 'דף אחד לכל אלמוג, מוכן מראש עם שם המצוף.' },
@@ -160,7 +175,7 @@ export const DECKS = {
             'לבחור רק מושבות עם 7 חורים לפחות. אם יש פחות, ממשיכים לחפש.',
             'לבדוק בלילה את אותם חורים כמו ביום: לרשום את מיקומם לפי כיוון השעון ביחס לאבן העוגן, ולצלם.',
             'לשחרר מעט צבע ליד סיפון היניקה בלי לגעת, ולחכות כמה שניות לסילון. בין בדיקה לבדיקה מחכים שהצבע יתפזר.',
-            'לשמור אזימוט ומרחק מהמצלמה לכל אלמוג, כגיבוי ל־GPS שעל פני המים.',
+            'לשמור אזימוט ומרחק מהמסגרת לכל אלמוג, כגיבוי ל־GPS שעל פני המים.',
             'למודל התלת־ממדי: הרבה תמונות חופפות סביב המושבה ומעליה, עם סרגל בתמונה.',
             'לתעד אור וזרם באותו אופן בכל אלמוג: חשוף או מוצל, וכיוון סחיפת הצבע.',
           ],
@@ -173,9 +188,9 @@ export const DECKS = {
         {
           type: 'steps', title: 'צלילת היום',
           steps: [
-            { title: 'ירידה במצלמה', text: 'שני הצמדים יורדים יחד בנקודת המצלמה ומתפצלים: צמד צפון צפונה, צמד דרום דרומה.' },
+            { title: 'ירידה במסגרת', text: 'שני הצמדים יורדים יחד במסגרת עם הגליל ומתפצלים: צמד צפון צפונה, צמד דרום דרומה.' },
             { title: 'חיפוש', text: 'מחפשים לאורך השונית מושבה עם לפחות 7 חורים בצורת 8.' },
-            { title: 'ניווט', text: 'רועי ומוריה מודדים אזימוט ומרחק מהמצלמה, או מהאלמוג הקודם.' },
+            { title: 'ניווט', text: 'רועי ומוריה מודדים אזימוט ומרחק מהמסגרת, או מהאלמוג הקודם.' },
             { title: 'בדיקה ומדידה', text: 'סופרים חורים, מצלמים, מודדים ובודקים בפלואורסצאין (ראו בשקופית הבאה).' },
             { title: 'סימון', text: 'קושרים את המצוף לאבן ליד המושבה ומפעילים את הסטיקלייט. ממשיכים לאלמוג הבא.' },
           ],
@@ -199,6 +214,11 @@ export const DECKS = {
             'מצלמים את המצוף מלמעלה, כדי שיהיה קל לזהות אותו בלילה.',
           ],
         },
+        { type: 'photos', title: 'בדיקת פלואורסצאין', lead: 'מזריקים מעט צבע ליד פתח החור ומחכים: צדפה פעילה פולטת סילון ירוק.', photos: P.fluor },
+        { type: 'photos', title: 'סימון במצופים', lead: 'כל מצוף קשור לאבן ליד המושבה, עם סטיקלייט ומחזירי אור.', photos: P.mark },
+        { type: 'photos', title: 'הלוח התת־ימי', lead: 'כל הנתונים נרשמו מתחת למים על לוח, ומשם עברו לאתר.', photos: P.slate },
+        { type: 'foundMap', title: 'איפה מצאנו', lead: 'כל חמשת האלמוגים נמצאו קרוב למסגרת: ארבעה בטווח של כ־6 מ׳ ממנה, והצב כ־20 מ׳ צפונה. המיקומים לפי ה־GPS מהשנירקול.' },
+        { type: 'coralCards', title: 'האלמוגים שסימנו', lead: 'לחיצה על כרטיס פותחת את האלמוג במפה, עם המודל, התמונות וכל הנתונים.' },
         { type: 'phase', phase: 'day', title: 'תוצאות היום' },
       ],
     },
@@ -212,7 +232,7 @@ export const DECKS = {
         {
           type: 'steps', title: 'צלילת הלילה',
           steps: [
-            { title: 'ניווט', text: 'יורדים במצלמה ומנווטים לפי האזימוטים והמרחקים שנרשמו ביום.' },
+            { title: 'ניווט', text: 'יורדים במסגרת ומנווטים לפי האזימוטים והמרחקים שנרשמו ביום.' },
             { title: 'איתור', text: 'מוצאים את המצופים לפי הסטיקלייט, ובאור הפנס לפי מחזירי האור.' },
             { title: 'זיהוי', text: 'מוודאים לפי החיה שזה האלמוג הנכון.' },
             { title: 'בדיקה', text: 'בודקים בפלואורסצאין את אותו מספר חורים, ומאירים בפנס UV כדי לראות את הסילון.' },
@@ -235,6 +255,11 @@ export const DECKS = {
       title: 'מסקנות ותוצאות',
       slides: [
         { type: 'summary', title: 'התוצאות במבט אחד' },
+        { type: 'coralCards', title: 'כל אלמוג במבט אחד' },
+        { type: 'holesChart', title: 'חורים ובדיקות', lead: 'כל פס הוא אלמוג: כמה חורים ספרנו, כמה בדקנו בפלואורסצאין ביום, וכמה מהן היו פעילות.' },
+        { type: 'size', title: 'שטח ונפח המושבות', lead: 'כמה גדולה כל מושבה: שטח הפנים שבו הצדפות קודחות, והנפח של המושבה.' },
+        { type: 'densities', title: 'חורים וצדפות פעילות ביחס לגודל', lead: 'אותם נתונים, מנורמלים לגודל המושבה: ביחס לשטח הפנים וביחס לנפח.' },
+        { type: 'sizeRelations', title: 'גודל המושבה מול מספר הצדפות' },
         { type: 'coralTable', title: 'כל האלמוגים' },
         { type: 'activityChart', title: 'פעילות ביום ובלילה' },
         { type: 'densityChart', title: 'צפיפות הצדפות' },
@@ -303,17 +328,20 @@ export const DECKS = {
       slides: [
         {
           type: 'groups', title: 'Two pairs',
-          lead: 'There are four of us, split into two pairs. Both pairs descend at the camera point: one pair swims north and the other south.',
+          lead: 'There are four of us, split into two pairs. Both pairs descend at the cylinder frame, 9 m deep: one pair swims north and the other south.',
           groups: [
-            { pair: 'north', title: 'North pair', sub: 'Swims north from the camera', members: ['Roy', 'Gaia'] },
-            { pair: 'south', title: 'South pair', sub: 'Swims south from the camera', members: ['Moriya', 'Naama'] },
+            { pair: 'north', title: 'North pair', sub: 'Swims north from the frame', members: ['Roy', 'Gaia'] },
+            { pair: 'south', title: 'South pair', sub: 'Swims south from the frame', members: ['Moriya', 'Naama'] },
           ],
         },
+        { type: 'photos', title: 'Getting ready on the shore', photos: P.shore },
+        { type: 'photos', title: 'The north pair in the water', lead: 'Roy and Gaia marked the dolphin, the octopus and the turtle.', photos: P.north },
+        { type: 'photos', title: 'The south pair in the water', lead: 'Moriya and Naama marked the whale and the clownfish.', photos: P.south },
         {
           type: 'cards', title: 'Roles',
           lead: 'Roy and Moriya navigate and take compass bearings. Each pair shares the other tasks between its two divers.',
           cards: [
-            { title: 'Navigation and bearings', text: 'Roy in the north pair, Moriya in the south pair: bearing and distance from the camera to each coral, and from coral to coral.' },
+            { title: 'Navigation and bearings', text: 'Roy in the north pair, Moriya in the south pair: bearing and distance from the frame to each coral, and from coral to coral.' },
             { title: 'Counting and testing', text: 'Counting the holes, and the fluorescein test on a third of them, at least 7.' },
             { title: 'Photos and measuring', text: 'Photos all around the colony for the 3D model, and reference measurements.' },
             { title: 'Marking', text: 'A sea-animal float with a light stick and reflectors, before moving to the next coral.' },
@@ -336,14 +364,14 @@ export const DECKS = {
         {
           type: 'steps', title: 'Order of the mission', schedule: true,
           steps: [
-            { key: 'dayDive', title: 'Day dive', text: 'Descend at the camera point. Each pair finds 2–3 corals, measures, tests and marks them.' },
+            { key: 'dayDive', title: 'Day dive', text: 'Descend at the cylinder frame. Each pair finds 2–3 corals, measures, tests and marks them.' },
             { key: 'snorkel', title: 'Snorkel', text: 'Swim over each float and save its position on the GPS.' },
             { key: null, title: 'Records', text: 'Copy the data from the slates into the table, and check that every light stick is still glowing.' },
             { key: 'nightDive', title: 'Night dive', text: 'Return to the same corals and test the bivalves’ activity again.' },
             { key: null, title: 'Clean-up', text: 'Collect every float, stone and light stick.' },
           ],
         },
-        { type: 'zones', title: 'Search areas', lead: 'The entry point is the underwater camera. The north pair searches north of it and the south pair south of it, along the reef.' },
+        { type: 'zones', title: 'Search areas', lead: 'The start point is a cylinder 50 cm across in the middle of a 3 × 3 m frame, 9 m deep, two thirds of the way from the pier to the Habitat. The north pair searches north of it and the south pair south of it, along the reef.' },
         { type: 'floats', title: 'The floats', lead: 'Each coral gets its own animal, so at night we know exactly which coral we reached.' },
         { type: 'rule', title: 'How many bivalves to test', lead: 'We test a third of the holes with fluorescein. If a third comes to fewer than 7, we test 7.' },
         { type: 'sheet', title: 'The underwater data sheet', lead: 'One sheet per coral, prepared in advance with the float’s name.' },
@@ -367,7 +395,7 @@ export const DECKS = {
             'Only choose colonies with at least 7 holes. With fewer, keep searching.',
             'Test the same holes at night as by day: note their position by clock direction from the anchor stone, and take a photo.',
             'Release a little dye next to the inhalant siphon without touching, and wait a few seconds for the jet. Let the dye clear between tests.',
-            'Record a bearing and distance from the camera to each coral, as a backup to the surface GPS.',
+            'Record a bearing and distance from the frame to each coral, as a backup to the surface GPS.',
             'For the 3D model: many overlapping photos around and above the colony, with a ruler in frame.',
             'Record light and current the same way on every coral: exposed or shaded, and which way the dye drifts.',
           ],
@@ -380,9 +408,9 @@ export const DECKS = {
         {
           type: 'steps', title: 'The day dive',
           steps: [
-            { title: 'Descend at the camera', text: 'Both pairs descend together at the camera point and split: the north pair north, the south pair south.' },
+            { title: 'Descend at the frame', text: 'Both pairs descend together at the cylinder frame and split: the north pair north, the south pair south.' },
             { title: 'Search', text: 'Search along the reef for a colony with at least 7 figure-8 holes.' },
-            { title: 'Navigate', text: 'Roy and Moriya take a bearing and distance from the camera, or from the previous coral.' },
+            { title: 'Navigate', text: 'Roy and Moriya take a bearing and distance from the frame, or from the previous coral.' },
             { title: 'Test and measure', text: 'Count holes, take photos, measure and test with fluorescein (see the next slide).' },
             { title: 'Mark', text: 'Tie the float to a stone next to the colony and crack the light stick. Move on to the next coral.' },
           ],
@@ -406,6 +434,11 @@ export const DECKS = {
             'Photograph the float from above, so it is easy to recognise at night.',
           ],
         },
+        { type: 'photos', title: 'The fluorescein test', lead: 'A little dye goes next to the hole opening, then we wait: an active bivalve sends out a green jet.', photos: P.fluor },
+        { type: 'photos', title: 'Marking with floats', lead: 'Each float is tied to a stone next to the colony, with a light stick and reflectors.', photos: P.mark },
+        { type: 'photos', title: 'The underwater slate', lead: 'All the data was written on a slate under water, and copied from there into the site.', photos: P.slate },
+        { type: 'foundMap', title: 'Where we found them', lead: 'All five corals were close to the frame: four within about 6 m of it, and the turtle about 20 m to the north. Positions from the snorkel GPS.' },
+        { type: 'coralCards', title: 'The corals we marked', lead: 'Click a card to open the coral on the map, with its model, photos and all its data.' },
         { type: 'phase', phase: 'day', title: 'Day results' },
       ],
     },
@@ -419,7 +452,7 @@ export const DECKS = {
         {
           type: 'steps', title: 'The night dive',
           steps: [
-            { title: 'Navigate', text: 'Descend at the camera and navigate by the bearings and distances recorded by day.' },
+            { title: 'Navigate', text: 'Descend at the frame and navigate by the bearings and distances recorded by day.' },
             { title: 'Find', text: 'Find the floats by their light sticks, and by the reflectors in the torch beam.' },
             { title: 'Identify', text: 'Check the animal to confirm it is the right coral.' },
             { title: 'Test', text: 'Test the same number of holes with fluorescein, using the UV torch to see the jet.' },
@@ -442,6 +475,11 @@ export const DECKS = {
       title: 'Results and conclusions',
       slides: [
         { type: 'summary', title: 'The results at a glance' },
+        { type: 'coralCards', title: 'Each coral at a glance' },
+        { type: 'holesChart', title: 'Holes and tests', lead: 'Each bar is one coral: how many holes we counted, how many we tested with fluorescein by day, and how many of those were active.' },
+        { type: 'size', title: 'Colony area and volume', lead: 'How big each colony is: the surface the bivalves bore into, and the colony’s volume.' },
+        { type: 'densities', title: 'Holes and active bivalves relative to size', lead: 'The same data, scaled to colony size: per surface area and per volume.' },
+        { type: 'sizeRelations', title: 'Colony size against bivalve count' },
         { type: 'coralTable', title: 'All the corals' },
         { type: 'activityChart', title: 'Activity by day and by night' },
         { type: 'densityChart', title: 'Bivalve density' },

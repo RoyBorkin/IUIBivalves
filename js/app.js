@@ -8,6 +8,7 @@ import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
 import { SITE, POINTS, LIVE_CAMERA_YOUTUBE_ID, SHORELINE, PIER, BUILDINGS, ISOBATHS, DROP, GROUND_MAP, COVER, PIPES, CORAL_MODELS } from './data.js';
 import { DECKS, PAIRS, FLOATS, ZONES, TEST_RULE, SITE_URL } from './mission.js';
 import { CORALS, CONCLUSIONS, LESSONS, SCHEDULE } from './findings.js';
+import { holesChart } from './analysis.js';
 import { applyDemo } from './demo.js';
 import { derive, summary, toTest, r1, activityChart, densityChart, scatter as scatterChart, DAY_COL, NIGHT_COL } from './analysis.js';
 import { badgeSVG, logoSVG, BADGE_BG } from './badges.js';
@@ -195,10 +196,11 @@ for (let guard = 0; guard < 4; guard++) {
 }
 CORALS.forEach((c) => { c.placed = c.e !== undefined; c.calc = derive(c); });
 const PLACED = CORALS.filter((c) => c.placed);
-const CAM = byId.camera;
+const CAM = byId.frame; // where both dives started
 const ctx = (c, f) => (LANG === 'en' && c['en_' + f] ? c['en_' + f] : c[f]);
 const floatName = (c) => FLOATS[c.float][LANG];
 const coralName = (c) => t('coralName', c.num, floatName(c));
+const capOf = (ph) => (LANG === 'en' && ph.en_caption ? ph.en_caption : ph.caption);
 
 /* ═════════════ position along the shore ═════════════ */
 POINTS.forEach((p) => (p.s = seaDist(p.e, p.n)));
@@ -712,7 +714,7 @@ POINTS.forEach((p) => {
   const ground = W(p.e, p.n, yAt(p.e, p.n));
   p.world = ground;
   const grp = new THREE.Group();
-  const base = p.live ? pinCamMat : pinMat;
+  const base = p.entry ? pinCamMat : pinMat;
   const needle = new THREE.Mesh(pinNeedle, base);
   const head = new THREE.Mesh(pinHead, base);
   head.position.y = PIN_HEAD_Y;
@@ -887,11 +889,11 @@ const labels = [];
 POINTS.forEach((p) => {
   const el = document.createElement('button');
   el.type = 'button';
-  el.className = 'plabel' + (p.live ? ' plabel-cam' : '');
+  el.className = 'plabel' + (p.entry ? ' plabel-cam' : '');
   el.addEventListener('click', () => select(p.id));
   labelLayer.appendChild(el);
   const m = markers.find((x) => x.p === p);
-  labels.push({ p, el, w: 0, h: 0, prio: p.live ? 1 : 3, pos: () => tmpL.copy(m.grp.position).add(tmpUp.set(0, PIN_HEAD_Y * m.grp.scale.y, 0)), gap: 16 });
+  labels.push({ p, el, w: 0, h: 0, prio: p.entry ? 1 : 3, pos: () => tmpL.copy(m.grp.position).add(tmpUp.set(0, PIN_HEAD_Y * m.grp.scale.y, 0)), gap: 16 });
 });
 coralMarks.forEach((cm) => {
   const el = document.createElement('button');
@@ -1045,6 +1047,9 @@ function dimsText(p) {
 
 function sketchSVG(p) {
   const Wd = 300, Hd = 180, pad = 30;
+  if (p.id === 'frame') {
+    return `<svg viewBox="0 0 ${Wd} ${Hd}" role="img" aria-label="${esc(nm(p))}"><g class="sk"><rect x="80" y="20" width="140" height="140"/><rect x="128" y="78" width="44" height="24" rx="12"/></g><g class="sk-t"><text x="150" y="14" text-anchor="middle">3 ${t('m')}</text><text x="150" y="122" text-anchor="middle">⌀ 50 cm</text></g></svg>`;
+  }
   if (p.shape === 'camera') {
     return `<svg viewBox="0 0 ${Wd} ${Hd}" role="img" aria-label="${t('skCam')}"><g class="sk" transform="translate(110 40)"><rect x="0" y="20" width="62" height="40" rx="4"/><circle cx="31" cy="40" r="12"/><circle cx="31" cy="40" r="5"/><path d="M62 30l20-10v40l-20-10"/><path d="M31 60v40M31 100l-22 30M31 100l22 30"/></g></svg>`;
   }
@@ -1107,12 +1112,12 @@ function mediaHTML(p) {
 function fromCamLine(p) {
   if (p === CAM || !p.placed && p.e === undefined) return '';
   const b = Math.round(bearingBetween(CAM, p)), d = Math.round(distBetween(CAM, p));
-  return `<button type="button" class="leg-btn" data-go="camera">${bearingIcon(b)}<span class="lt"><b>${t('fromCamTitle')}</b><span>${t('fromCam', b, d)}</span></span></button>`;
+  return `<button type="button" class="leg-btn" data-go="${CAM.id}">${bearingIcon(b)}<span class="lt"><b>${t('fromCamTitle')}</b><span>${t('fromCam', b, d)}</span></span></button>`;
 }
 
 function renderPanel(p) {
   if (p.isCoral) return renderCoralPanel(p);
-  const kicker = p.live ? t('camKicker') : t('landmark');
+  const kicker = p.entry ? t('camKicker') : t('landmark');
   const material = p.material ? esc(tx(p, 'material')) : `<span class="muted">${t('notRecorded')}</span>`;
   const est = p.estimated
     ? `<span class="est">${esc(t('est', p.derive.bearing, p.derive.dist, nm(byId[p.derive.from]), p.derive.rough))}</span>`
@@ -1125,7 +1130,7 @@ function renderPanel(p) {
       </div>
       <button type="button" class="icon-btn" id="pClose" aria-label="${t('close')}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
     </header>
-    ${p.live ? `<p class="p-entry">${t('entryNote')}</p>` : ''}
+    ${p.entry ? `<p class="p-entry">${t('entryNote')}</p>` : ''}
     ${mediaHTML(p)}
     <dl class="facts">
       <dt>${t('fDepth')}</dt><dd>${p.hasDepth ? `<span class="big">${p.depthText} ${t('m')}</span>` : `<span class="muted">${t('notMeasured')}</span>`}</dd>
@@ -1137,7 +1142,7 @@ function renderPanel(p) {
     ${p.note ? `<p class="p-note">${esc(tx(p, 'note'))}</p>` : ''}
     ${p.model && p.photos.length ? `<p class="p-note">${t('modelPhotos')}</p>` : ''}
     ${p.model && !p.photos.length ? `<p class="p-note">${t('modelGeneric')}</p>` : ''}
-    ${p.live ? '' : `<section class="legs">${fromCamLine(p)}</section>`}
+    ${p.entry ? '' : `<section class="legs">${fromCamLine(p)}</section>`}
   `;
   wirePanel(p);
 }
@@ -1155,13 +1160,22 @@ function activityCell(ph, holes) {
 function sizeText(c) {
   const s = c.sizeCm || [];
   if (!s.some(isNum)) return muted();
+  if (isNum(s[0]) && !isNum(s[1]) && !isNum(s[2])) return `${t('aboutCm', s[0])}<span class="est">${t('refSize')}</span>`;
   return t('sizeCm', ...s.map((v) => (isNum(v) ? v : '–')));
+}
+const GALLERY_FIRST = 12;
+function galleryHTML(list, name, all = false) {
+  const shown = all ? list : list.slice(0, GALLERY_FIRST);
+  return `<div class="gallery gallery-grid">${shown.map((ph, i) => `<button type="button" data-photo="${i}" aria-label="${t('photoAria', i + 1, list.length)}"><img src="${esc(thumb(ph.src))}" alt="${esc(capOf(ph) || t('photoAlt', name, i + 1))}" loading="lazy" decoding="async">${capOf(ph) ? `<span class="g-cap">${esc(capOf(ph))}</span>` : ''}</button>`).join('')}</div>${!all && list.length > GALLERY_FIRST ? `<button type="button" class="btn btn-more" id="galMore">${t('morePhotos', list.length - GALLERY_FIRST)}</button>` : `<p class="gallery-count">${t('photosCount', list.length)}</p>`}`;
 }
 function renderCoralPanel(c) {
   const P = PAIRS[c.pair][LANG];
   const status = c.found ? t('statusFound') : t('statusPlanned');
   const model3d = c.model3d || '';
   const sketchfab = /sketchfab\.com/.test(model3d) ? (model3d.match(/([0-9a-f]{32})/) || [])[1] : null;
+  const hasModel = !!model3d && !sketchfab;
+  const mode = hasModel ? viewer.mode || 'coral' : 'float';
+  const b = c.placed ? Math.round(bearingBetween(CAM, c)) : null, d = c.placed ? Math.round(distBetween(CAM, c)) : null;
   panelBody.innerHTML = `
     <header class="p-head">
       <div>
@@ -1172,15 +1186,20 @@ function renderCoralPanel(c) {
     </header>
     <p class="status ${c.found ? 'is-found' : ''}">${status}</p>
     <figure class="p-media viewer">
+      ${hasModel ? `<div class="seg" role="group" aria-label="${t('viewerPick')}"><button type="button" data-view="coral" aria-pressed="${mode === 'coral'}">${t('viewCoral')}</button><button type="button" data-view="float" aria-pressed="${mode === 'float'}">${t('viewFloat', floatName(c))}</button></div>` : ''}
       ${sketchfab ? `<div class="live"><iframe src="https://sketchfab.com/models/${sketchfab}/embed?autostart=1&ui_infos=0&ui_watermark=0" title="${t('model3dTitle')}" allow="autoplay; fullscreen; xr-spatial-tracking" loading="lazy"></iframe></div>` : '<div class="viewer-box" id="viewer"></div>'}
-      <figcaption>${model3d ? t('viewerModel') : t('viewerFloat', floatName(c))}</figcaption>
+      <figcaption id="viewerCap">${mode === 'coral' ? t('viewerModel') : t('viewerFloat', floatName(c))}${!model3d && c.found ? `<span class="est">${t('noModel')}</span>` : ''}</figcaption>
     </figure>
-    ${c.photos && c.photos.length ? `<div class="p-media"><div class="gallery">${c.photos.map((ph, i) => `<button type="button" data-photo="${i}" aria-label="${t('photoAria', i + 1, c.photos.length)}"><img src="${esc(thumb(ph.src))}" alt="${esc(ph.caption || t('photoAlt', coralName(c), i + 1))}" loading="lazy" decoding="async"></button>`).join('')}</div></div>` : ''}
+    ${c.photos && c.photos.length ? `<div class="p-media" id="gal">${galleryHTML(c.photos, coralName(c))}</div>` : ''}
     <h3 class="facts-h">${t('hBivalves')}</h3>
     <dl class="facts">
       <dt>${t('fHoles')}</dt><dd>${isNum(c.holes) ? `<span class="big">${num(c.holes)}</span>` : muted()}</dd>
-      <dt>${t('fArea')}</dt><dd>${val(c.surfaceCm2, t('cm2'))}</dd>
+      <dt>${t('fArea')}</dt><dd>${val(c.surfaceCm2, t('cm2'))}${isNum(c.surfaceCm2) ? `<span class="est">${t('areaEst')}</span>` : ''}</dd>
+      <dt>${t('fVolume')}</dt><dd>${val(c.volumeCm3, t('cm3'))}${isNum(c.volumeCm3) ? `<span class="est">${t('areaEst')}</span>` : ''}</dd>
       <dt>${t('fDensity')}</dt><dd>${isNum(c.calc.density) ? `<span class="big">${num(r1(c.calc.density))}</span> <span class="est">${t('densityUnit')}</span>` : muted()}</dd>
+      <dt>${t('fVolDensity')}</dt><dd>${isNum(c.calc.volDensity) ? `<span class="big">${num(r1(c.calc.volDensity))}</span> <span class="est">${t('volDensityUnit')}</span>` : muted()}</dd>
+      <dt>${t('fEstActive')}</dt><dd>${isNum(c.calc.estActive) ? `<span class="big">${num(Math.round(c.calc.estActive))}</span> <span class="est">${t('estActiveNote')}</span>` : muted()}</dd>
+      <dt>${t('fActiveDensity')}</dt><dd>${isNum(c.calc.activeDensity) ? `<span class="big">${num(r1(c.calc.activeDensity))}</span> <span class="est">${t('activeDensityUnit', num(r1(c.calc.activeVolDensity)))}</span>` : muted()}</dd>
       <dt>${t('fDay')}</dt><dd>${activityCell(c.day, c.holes)}</dd>
       <dt>${t('fNight')}</dt><dd>${activityCell(c.night, c.holes)}</dd>
       <dt>${t('fBurrows')}</dt><dd>${txt(c, 'burrows')}</dd>
@@ -1189,12 +1208,13 @@ function renderCoralPanel(c) {
     <dl class="facts">
       <dt>${t('fSpecies')}</dt><dd>${txt(c, 'species')}</dd>
       <dt>${t('fForm')}</dt><dd>${txt(c, 'form')}</dd>
-      <dt>${t('fColor')}</dt><dd>${txt(c, 'color')}</dd>
+      <dt>${t('fColor')}</dt><dd>${c.colorHex ? `<span class="swatch" style="background:${esc(c.colorHex)}"></span>` : ''}${txt(c, 'color')}${c.colorHex ? `<span class="est">${t('colorNote')}</span>` : ''}</dd>
       <dt>${t('fSize')}</dt><dd>${sizeText(c)}</dd>
     </dl>
     <h3 class="facts-h">${t('hPlace')}</h3>
     <dl class="facts">
       <dt>${t('fDepth')}</dt><dd>${isNum(c.depth) ? `<span class="big">${num(c.depth)} ${t('m')}</span>` : muted()}</dd>
+      <dt>${t('fBearing')}</dt><dd>${b !== null ? `<span class="big">${num(`${b}°`)}</span> <span class="est">${t('bearingFrom', d)}</span>` : muted()}</dd>
       <dt>${t('fLight')}</dt><dd>${isNum(c.lightLux) ? `${num(c.lightLux)} lux${ctx(c, 'light') ? ` · ${esc(ctx(c, 'light'))}` : ''}` : txt(c, 'light')}</dd>
       <dt>${t('fTerrain')}</dt><dd>${txt(c, 'substrate')}</dd>
       <dt>${t('fCurrent')}</dt><dd>${txt(c, 'current')}</dd>
@@ -1204,6 +1224,16 @@ function renderCoralPanel(c) {
     ${c.placed ? `<section class="legs">${fromCamLine(c)}</section>` : ''}
   `;
   wirePanel(c);
+  $('#galMore')?.addEventListener('click', () => {
+    $('#gal').innerHTML = galleryHTML(c.photos, coralName(c), true);
+    $('#gal').querySelectorAll('[data-photo]').forEach((x) => x.addEventListener('click', () => openPhoto(c.photos, +x.dataset.photo, coralName(c))));
+  });
+  panelBody.querySelectorAll('[data-view]').forEach((x) => x.addEventListener('click', () => {
+    viewer.mode = x.dataset.view;
+    panelBody.querySelectorAll('[data-view]').forEach((y) => y.setAttribute('aria-pressed', String(y === x)));
+    $('#viewerCap').textContent = viewer.mode === 'coral' ? t('viewerModel') : t('viewerFloat', floatName(c));
+    startViewer(c);
+  }));
   if (!sketchfab) startViewer(c);
 }
 function wirePanel(p) {
@@ -1233,12 +1263,13 @@ function startViewer(c) {
   }
   viewer.canvas = cv;
   cv.appendChild(viewer.renderer.domElement);
-  const key = c.model3d || c.float;
+  const useModel = /\.(glb|gltf)$/i.test(c.model3d || '') && (viewer.mode || 'coral') === 'coral';
+  const key = useModel ? c.model3d : c.float;
   if (viewer.key !== key) {
     if (viewer.obj) viewer.scene.remove(viewer.obj);
     viewer.obj = null;
     viewer.key = key;
-    if (/\.(glb|gltf)$/i.test(c.model3d || '')) {
+    if (useModel) {
       if (!viewer.loader) {
         viewer.loader = new GLTFLoader();
         const draco = new DRACOLoader(); draco.setDecoderPath('vendor/three/addons/libs/draco/gltf/');
@@ -1369,7 +1400,7 @@ function initMap() {
   });
   POINTS.forEach((p) => {
     const m = L.marker(ll(p), {
-      icon: L.divIcon({ className: '', html: `<span class="ipin${p.live ? ' ipin-cam' : ''}"></span>`, iconSize: [18, 24], iconAnchor: [9, 23] }),
+      icon: L.divIcon({ className: '', html: `<span class="ipin${p.entry ? ' ipin-cam' : ''}"></span>`, iconSize: [18, 24], iconAnchor: [9, 23] }),
       title: nm(p), keyboard: true, riseOnHover: true,
     }).addTo(map);
     m.bindTooltip(nm(p), { direction: 'top', offset: [0, -22], className: 'ix-tip' });
@@ -1676,7 +1707,7 @@ function frame(now) {
   controls.update();
   // pins keep a constant on-screen size, and drop in one after another
   markers.forEach((m, i) => {
-    const order = m.p.live ? 0 : i + 1;
+    const order = m.p.entry ? 0 : i + 1;
     const k = reduceMotion ? 1 : clamp((now - introStart - order * 60) / 380, 0, 1);
     const pop = k === 0 ? 0 : 1 + 0.3 * Math.sin(Math.PI * k) * (1 - k);
     const d = camera.position.distanceTo(m.grp.position);
@@ -1727,10 +1758,10 @@ const dash = '–';
 const fmt = (v, d = 1) => (isNum(v) ? num(d === 0 ? Math.round(v) : r1(v)) : dash);
 
 /* top-down map of the search areas around the camera */
-function zonesFigure() {
-  const pts = [CAM, ...zones.flatMap((z) => z.edge), ...PLACED];
+function zonesFigure(found = false) {
+  const pts = found ? [CAM, ...PLACED] : [CAM, ...zones.flatMap((z) => z.edge), ...PLACED];
   const es = pts.map((q) => q.e), ns = pts.map((q) => q.n);
-  const pad = 12;
+  const pad = found ? 5 : 12;
   const minE = Math.min(...es) - pad, maxE = Math.max(...es) + pad, minN = Math.min(...ns) - pad, maxN = Math.max(...ns) + pad;
   const Wd = 760, Hd = 430;
   const k = Math.min(Wd / (maxE - minE), Hd / (maxN - minN));
@@ -1755,18 +1786,44 @@ function zonesFigure() {
     out += `<g class="${camP ? 'f-pin f-pin-cam' : 'f-pin'}" transform="translate(${x.toFixed(1)} ${y.toFixed(1)})"><path d="M0 0C0 0-7-8.5-7-13a7 7 0 0 1 14 0c0 4.5-7 13-7 13z"/><circle cx="0" cy="-13" r="2.6" fill="#fff"/></g>`;
     out += `<text class="f-name${camP ? ' f-name-cam' : ''}" x="${(x + (isRTL() ? -10 : 10)).toFixed(1)}" y="${(y - 8).toFixed(1)}" text-anchor="${isRTL() ? 'end' : 'start'}">${esc(nm(p))}</text>`;
   });
+  if (found) {
+    // a bearing line from the frame to each coral
+    PLACED.forEach((c) => {
+      const b = Math.round(bearingBetween(CAM, c)), d = Math.round(distBetween(CAM, c));
+      out += `<path d="M${X(CAM).toFixed(1)} ${Y(CAM).toFixed(1)}L${X(c).toFixed(1)} ${Y(c).toFixed(1)}" stroke="${PAIRS[c.pair].color}" stroke-width="1.6" stroke-dasharray="5 4" fill="none"/>`;
+    });
+  }
+  // labels beside each coral; on each side they are spread so they never overlap, with a leader line
+  const labelsAt = [];
+  if (found) {
+    const items = PLACED.map((c) => ({ c, x: X(c), y: Y(c), right: c.e >= CAM.e }));
+    [true, false].forEach((side) => {
+      const list = items.filter((q) => q.right === side).sort((a, b) => a.y - b.y);
+      list.forEach((q, i) => { q.ly = i ? Math.max(q.y, list[i - 1].ly + 38) : q.y; });
+      const over = list.length ? list[list.length - 1].ly - (Hd - 24) : 0;
+      if (over > 0) list.forEach((q) => (q.ly -= over));
+      labelsAt.push(...list);
+    });
+  }
   PLACED.forEach((c) => {
-    const x = X(c), y = Y(c);
-    out += `<g transform="translate(${(x - 13).toFixed(1)} ${(y - 13).toFixed(1)})">${badgeSVG(c.float, { size: 26, ring: PAIRS[c.pair].color })}</g>`;
+    const x = X(c), y = Y(c), sz = found ? 30 : 26;
+    out += `<g transform="translate(${(x - sz / 2).toFixed(1)} ${(y - sz / 2).toFixed(1)})">${badgeSVG(c.float, { size: sz, ring: PAIRS[c.pair].color })}</g>`;
   });
-  zones.forEach((z) => {
+  labelsAt.forEach((q) => {
+    const b = Math.round(bearingBetween(CAM, q.c)), d = Math.round(distBetween(CAM, q.c));
+    const lx = q.x + (q.right ? 60 : -60), anchor = q.right ? 'start' : 'end';
+    out += `<path d="M${(q.x + (q.right ? 16 : -16)).toFixed(1)} ${q.y.toFixed(1)}L${(lx + (q.right ? -4 : 4)).toFixed(1)} ${(q.ly + 2).toFixed(1)}" stroke="#7A8794" stroke-width="1" fill="none"/>`;
+    out += `<text class="f-name" x="${lx.toFixed(1)}" y="${(q.ly - 1).toFixed(1)}" text-anchor="${anchor}">${esc(floatName(q.c))}</text>`;
+    out += `<text class="f-zone-p" x="${lx.toFixed(1)}" y="${(q.ly + 14).toFixed(1)}" text-anchor="${anchor}" direction="ltr">${b}° · ${d} ${t('m')}</text>`;
+  });
+  if (!found) zones.forEach((z) => {
     const x = X(z.mid), y = Y(z.mid);
     out += `<text class="f-zone" x="${x.toFixed(1)}" y="${(y + 4).toFixed(1)}" text-anchor="middle" fill="${PAIRS[z.key].color}">${esc(pairName(z.key))}</text>`;
     out += `<text class="f-zone-p" x="${x.toFixed(1)}" y="${(y + 22).toFixed(1)}" text-anchor="middle">${esc(people(z.key))}</text>`;
   });
-  const sc = 10 * k;
+  const unit = found ? 5 : 10, sc = unit * k;
   out += `<g transform="translate(${Wd - 40} 44)"><path class="f-line" d="M0 18V-14M-5 -8L0 -16 5 -8"/><text x="0" y="32" text-anchor="middle">${t('north')}</text></g>`;
-  out += `<g transform="translate(24 ${Hd - 20})"><path class="f-line" d="M0 0H${sc.toFixed(1)}M0 -4V4M${sc.toFixed(1)} -4V4"/><text x="${(sc / 2).toFixed(1)}" y="-8" text-anchor="middle">10 ${t('m')}</text></g>`;
+  out += `<g transform="translate(24 ${Hd - 20})"><path class="f-line" d="M0 0H${sc.toFixed(1)}M0 -4V4M${sc.toFixed(1)} -4V4"/><text x="${(sc / 2).toFixed(1)}" y="-8" text-anchor="middle">${unit} ${t('m')}</text></g>`;
   return `<svg viewBox="0 0 ${Wd} ${Hd}" role="img" aria-label="${t('zonesAria')}">${out}</svg>`;
 }
 
@@ -1870,7 +1927,7 @@ function summaryHTML() {
 }
 function coralTableHTML() {
   const h = t('tableHead');
-  const rows = CORALS.map((c) => `<tr><td>${coralCell(c)}</td><td>${esc(pairName(c.pair))}</td><td>${ctx(c, 'species') ? esc(ctx(c, 'species')) : dash}</td><td>${fmt(c.depth)}</td><td>${fmt(c.holes, 0)}</td><td>${fmt(c.surfaceCm2, 0)}</td><td>${fmt(c.calc.density)}</td><td>${isNum(c.calc.dayPct) ? num(`${Math.round(c.calc.dayPct)}%`) : dash}</td><td>${isNum(c.calc.nightPct) ? num(`${Math.round(c.calc.nightPct)}%`) : dash}</td></tr>`).join('');
+  const rows = CORALS.map((c) => `<tr><td>${coralCell(c)}</td><td>${fmt(c.depth)}</td><td>${fmt(c.holes, 0)}</td><td>${fmt(c.surfaceCm2, 0)}</td><td>${fmt(c.volumeCm3, 0)}</td><td>${fmt(c.calc.density)}</td><td>${fmt(c.calc.volDensity)}</td><td>${fmt(c.calc.estActive, 0)}</td><td>${fmt(c.calc.activeDensity)}</td><td>${isNum(c.calc.dayPct) ? num(`${Math.round(c.calc.dayPct)}%`) : dash}</td><td>${isNum(c.calc.nightPct) ? num(`${Math.round(c.calc.nightPct)}%`) : dash}</td></tr>`).join('');
   return `<div class="table-wrap"><table class="legtable data"><thead><tr>${h.map((x) => `<th>${x}</th>`).join('')}</tr></thead><tbody>${rows}</tbody></table></div>${noData()}`;
 }
 const chartOpts = () => ({ rtl: isRTL(), names: (c) => floatName(c), colors: (c) => PAIRS[c.pair].color, empty: t('noDataYet') });
@@ -1878,7 +1935,8 @@ function relationsHTML() {
   const o = chartOpts();
   return `<div class="scatters">
     ${scatterChart(CORALS, (c) => c.depth, (c) => c.calc.density, { ...o, xLabel: t('xDepth'), yLabel: t('yDensity'), empty: t('need2') })}
-    ${scatterChart(CORALS, (c) => c.lightLux, (c) => c.calc.density, { ...o, xLabel: t('xLight'), yLabel: t('yDensity'), empty: t('need2') })}
+    ${scatterChart(CORALS, (c) => c.sizeCm?.[0], (c) => c.calc.density, { ...o, xLabel: t('xSize'), yLabel: t('yDensity'), empty: t('need2') })}
+    ${scatterChart(CORALS, (c) => c.depth, (c) => c.calc.dayPct, { ...o, xLabel: t('xDepth'), yLabel: t('yDay'), empty: t('need2') })}
     ${scatterChart(CORALS, (c) => c.calc.dayPct, (c) => c.calc.nightPct, { ...o, xLabel: t('xDay'), yLabel: t('yNight'), empty: t('need2'), diagonal: true, fixed: [0, 100] })}
   </div><p class="slide-note">${t('relNote')}</p>`;
 }
@@ -1886,6 +1944,57 @@ function listOrNote(arr, note) {
   return arr && arr.length ? `<ul class="bullets">${arr.map((b) => `<li>${esc(b)}</li>`).join('')}</ul>` : `<p class="slide-note">${note}</p>`;
 }
 
+function photosHTML(s) {
+  const list = s.photos || [];
+  return `<div class="ph-grid${list.length === 1 ? ' ph-one' : list.length <= 5 ? ' ph-few' : ''}">${list.map((ph, i) => `<button type="button" data-sphoto="${i}"><img src="${esc(list.length === 1 ? ph.src : thumb(ph.src))}" alt="${esc(capOf(ph) || s.title)}" loading="lazy" decoding="async">${capOf(ph) ? `<span class="g-cap">${esc(capOf(ph))}</span>` : ''}</button>`).join('')}</div>`;
+}
+function coralCardsHTML() {
+  const pc = (v) => (isNum(v) ? num(`${Math.round(v)}%`) : dash);
+  return `<div class="ccards">${CORALS.filter((c) => c.found).map((c) => {
+    const cover = (c.photos || [])[c.cover || 0];
+    const b = c.placed ? `${num(`${Math.round(bearingBetween(CAM, c))}°`)} · ${num(Math.round(distBetween(CAM, c)))} ${t('m')}` : dash;
+    return `<section class="ccard" style="--pair:${PAIRS[c.pair].color}">
+      ${cover ? `<img src="${esc(thumb(cover.src))}" alt="${esc(coralName(c))}" loading="lazy">` : ''}
+      <div class="ccard-h">${badgeSVG(c.float, { size: 30 })}<h3>${esc(floatName(c))}</h3></div>
+      <dl>
+        <dt>${t('fDepth')}</dt><dd>${fmt(c.depth)} ${t('m')}</dd>
+        <dt>${t('fHoles')}</dt><dd>${fmt(c.holes, 0)}</dd>
+        <dt>${t('fDensity')}</dt><dd>${fmt(c.calc.density)}</dd>
+        <dt>${t('fDay')}</dt><dd>${pc(c.calc.dayPct)}</dd>
+        <dt>${t('fBearing')}</dt><dd>${b}</dd>
+        <dt>${t('fColor')}</dt><dd>${c.colorHex ? `<span class="swatch" style="background:${esc(c.colorHex)}"></span>` : ''}${esc(ctx(c, 'color') || '–')}</dd>
+        <dt>${t('fLight')}</dt><dd>${esc(ctx(c, 'light') || '–')}</dd>
+        <dt>${t('fTerrain')}</dt><dd>${esc(ctx(c, 'substrate') || '–')}</dd>
+      </dl>
+      <button type="button" class="btn go" data-coral-go="${c.id}">${t('openCoral')}</button>
+    </section>`;
+  }).join('')}</div>`;
+}
+function miniBars(title, unit, value, round = (v) => r1(v)) {
+  return `<figure class="mini"><figcaption><b>${esc(title)}</b> <span>${esc(unit)}</span></figcaption>${densityChart(CORALS, { ...chartOpts(), value, H: 230, round, labels: { aria: title } })}</figure>`;
+}
+function sizeHTML() {
+  return `<div class="minis">
+    ${miniBars(t('fArea'), t('cm2'), (c) => c.surfaceCm2, Math.round)}
+    ${miniBars(t('fVolume'), t('cm3'), (c) => c.volumeCm3, Math.round)}
+  </div><p class="slide-note">${t('sizeNote')}</p>`;
+}
+function densitiesHTML() {
+  return `<div class="minis">
+    ${miniBars(t('mHolesArea'), t('per100cm2'), (c) => c.calc.density)}
+    ${miniBars(t('mHolesVol'), t('per100cm3'), (c) => c.calc.volDensity)}
+    ${miniBars(t('mActiveArea'), t('per100cm2'), (c) => c.calc.activeDensity)}
+    ${miniBars(t('mActiveVol'), t('per100cm3'), (c) => c.calc.activeVolDensity)}
+  </div><p class="slide-note">${t('densitiesNote')}</p>`;
+}
+function sizeRelationsHTML() {
+  const o = chartOpts();
+  return `<div class="scatters">
+    ${scatterChart(CORALS, (c) => c.surfaceCm2, (c) => c.holes, { ...o, xLabel: t('xArea'), yLabel: t('yHoles'), empty: t('need2') })}
+    ${scatterChart(CORALS, (c) => c.volumeCm3, (c) => c.holes, { ...o, xLabel: t('xVolume'), yLabel: t('yHoles'), empty: t('need2') })}
+    ${scatterChart(CORALS, (c) => c.surfaceCm2, (c) => c.calc.estActive, { ...o, xLabel: t('xArea'), yLabel: t('yActive'), empty: t('need2') })}
+  </div><p class="slide-note">${t('sizeRelNote')}</p>`;
+}
 function slideHTML(s) {
   let body = '';
   const lead = s.lead ? `<p class="lead">${esc(s.lead)}</p>` : '';
@@ -1929,6 +2038,20 @@ function slideHTML(s) {
     body = listOrNote(CONCLUSIONS[LANG], t('concTbd'));
   } else if (s.type === 'lessons') {
     body = listOrNote(LESSONS[LANG], t('lessonsTbd'));
+  } else if (s.type === 'photos') {
+    body = lead + photosHTML(s);
+  } else if (s.type === 'coralCards') {
+    body = lead + coralCardsHTML();
+  } else if (s.type === 'foundMap') {
+    body = lead + `<div class="figure figure-map">${zonesFigure(true)}</div>`;
+  } else if (s.type === 'size') {
+    body = lead + sizeHTML();
+  } else if (s.type === 'densities') {
+    body = lead + densitiesHTML();
+  } else if (s.type === 'sizeRelations') {
+    body = lead + sizeRelationsHTML();
+  } else if (s.type === 'holesChart') {
+    body = lead + `<div class="figure">${holesChart(CORALS, { ...chartOpts(), labels: { active: t('legActive'), inactive: t('legInactive'), untested: t('legUntested'), aria: t('holesAria') } })}</div>`;
   }
   return `<article class="slide slide-${s.type}"><h2 id="deckSlideTitle">${esc(s.title)}</h2>${body}</article>`;
 }
@@ -1938,6 +2061,9 @@ function showSlide(i) {
   $('#deckName').textContent = d.title;
   $('#deckBody').innerHTML = slideHTML(d.slides[deckState.i]);
   $('#printSheets')?.addEventListener('click', printSheets);
+  const sl = d.slides[deckState.i];
+  $('#deckBody').querySelectorAll('[data-sphoto]').forEach((x) => x.addEventListener('click', () => openPhoto(sl.photos, +x.dataset.sphoto, sl.title)));
+  $('#deckBody').querySelectorAll('[data-coral-go]').forEach((x) => x.addEventListener('click', () => { deck.close(); select(x.dataset.coralGo); }));
   $('#deckBody').scrollTop = 0;
   $('#deckCount').textContent = `${deckState.i + 1} / ${d.slides.length}`;
   $('#deckPrev').disabled = deckState.i === 0;
@@ -2000,8 +2126,8 @@ function showPhoto(k) {
   lbSet.i = (k + list.length) % list.length;
   const ph = list[lbSet.i];
   $('#lbImg').src = ph.src;
-  $('#lbImg').alt = ph.caption || t('photoAlt', name, lbSet.i + 1);
-  $('#lbCap').textContent = `${ph.caption ? ph.caption + '. ' : ''}${t('photoOf', name, lbSet.i + 1, list.length)}`;
+  $('#lbImg').alt = capOf(ph) || t('photoAlt', name, lbSet.i + 1);
+  $('#lbCap').textContent = `${capOf(ph) ? capOf(ph) + '. ' : ''}${t('photoOf', name, lbSet.i + 1, list.length)}`;
   $('#lbPrev').hidden = $('#lbNext').hidden = list.length < 2;
 }
 function openPhoto(list, i = 0, name = '') {

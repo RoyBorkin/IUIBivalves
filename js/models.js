@@ -359,6 +359,18 @@ function lyingCylinder(kit, [d, l]) {
   return b.build();
 }
 
+// the start point: a cylinder 50 cm across lying in the middle of a 3 x 3 m frame
+function frameCylinder(kit) {
+  const b = new Builder(kit);
+  const S = 3, T = 0.07, FR = '#8A8F93';
+  for (const k of [-1, 1]) {
+    b.box(S + T, T, T, FR, [0, T / 2, k * S / 2]);
+    b.box(T, T, S + T, FR, [k * S / 2, T / 2, 0]);
+  }
+  b.geo(new THREE.CylinderGeometry(0.25, 0.25, 1, 20), CONCRETE, [0, 0.22, 0], [0, 0, Math.PI / 2]);
+  return b.build();
+}
+
 export function buildObject(kit, p) {
   const r = rng(p.id.split('').reduce((a, c) => a * 31 + c.charCodeAt(0), 7));
   switch (p.model) {
@@ -374,6 +386,7 @@ export function buildObject(kit, p) {
     case 'shahar': return shaharTable(kit, p.dims, r);
     case 'cube': return concreteCube(kit, p.dims);
     case 'cylinder': return lyingCylinder(kit, p.dims);
+    case 'frameCyl': return frameCylinder(kit);
     default: return null;
   }
 }

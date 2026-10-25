@@ -154,6 +154,17 @@ export const POINTS = [
     note: 'מצלמה תת־ימית ששידורה פתוח לציבור.',
     photos: [],
   },
+  {
+    // two thirds of the way from the pier to the Habitat, towards the deep water
+    id: 'frame', name: 'גליל במסגרת',
+    en: {name: "Cylinder in a frame", terrain: "Sand and rubble", dimsText: "Cylinder 50 cm across, frame 3 × 3 m", note: "A cylinder 50 cm across lying in the middle of a 3 × 3 m frame, two thirds of the way from the pier to the Habitat. Both dives started here."},
+    lat: [29, 30.0827], lon: [34, 55.0470],
+    depth: [9], dims: [3, 3, 0.5], dimsText: 'גליל בקוטר 50 ס״מ, מסגרת 3 × 3 מ׳', shape: 'box',
+    terrain: 'חול ודרדרת', material: '',
+    entry: true,
+    note: 'גליל בקוטר 50 ס״מ ששוכב במרכז מסגרת של 3 × 3 מטר, שני שליש מהדרך מהמזח להביטט. משם יצאנו לשתי הצלילות.',
+    photos: [], model: 'frameCyl',
+  },
 ];
 
 // Waterline traced from the Esri satellite image, north to south.

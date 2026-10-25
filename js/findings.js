@@ -24,6 +24,7 @@ const empty = (id, float, pair) => ({
   color: '', en_color: '',          // צבע האלמוג
   sizeCm: [null, null, null],       // רוחב, אורך, גובה בס"מ
   surfaceCm2: null,                 // שטח פנים מהמודל התלת־ממדי (סמ"ר)
+  volumeCm3: null,                  // נפח המושבה (סמ"ק)
   holes: null,                      // מספר החורים (צדפות) שנספרו באלמוג
   day: { time: '', tested: null, active: null },   // כמה נבדקו בפלואורסצאין, כמה מהן פעילות
   night: { time: '', tested: null, active: null },
@@ -32,25 +33,139 @@ const empty = (id, float, pair) => ({
   current: '', en_current: '',                      // חשיפה לזרם: נמוכה / בינונית / גבוהה
   burrows: '', en_burrows: '',                      // איפה החורים על המושבה (צמרת, צדדים, בסיס)
   notes: '', en_notes: '',
+  lightLevel: null,      // 1 מואר, 2 מואר חלקית, 3 מוצל
+  colorHex: '',          // צבע המושבה כפי שנראה בתמונות
   photos: [],            // [{ src: 'assets/photos/c1-1.jpg', caption: '' }]
   model3d: '',           // המודל הפוטוגרמטרי: קובץ ‎.glb בתיקיית assets/models, או קישור Sketchfab
 });
 
+// תמונות: assets/photos/<מצוף>-<מספר>.jpg (וגרסה קטנה עם ‎-s). Photos for each coral.
+// captions: { מספר: ['כיתוב', 'caption'] }
+const shots = (key, n, captions = {}) =>
+  Array.from({ length: n }, (_, i) => ({ src: `assets/photos/${key}-${i + 1}.jpg`, caption: (captions[i + 1] || [])[0] || '', en_caption: (captions[i + 1] || [])[1] || '' }));
+const range = (a, b, text) => Object.fromEntries(Array.from({ length: b - a + 1 }, (_, i) => [a + i, text]));
+
+// שטח הפנים מוערך מגודל הייחוס (ס״מ, מול אצבע), בקירוב של כיפה: π·d²/2.
+// Surface area estimated from the reference size (cm, against a finger), as a dome: π·d²/2.
+const dome = (d) => Math.round((Math.PI * d * d) / 2);
+// נפח מוערך באותו קירוב (חצי כדור בקוטר d): π·d³/12. Volume, same dome: π·d³/12.
+const domeVol = (d) => Math.round((Math.PI * d * d * d) / 12);
+
+// תאורה כפי שנרשמה בלוח: 1 = מואר, 2 = מואר חלקית, 3 = מוצל
+const LIGHT = {
+  1: ['מואר', 'Lit'],
+  2: ['מואר חלקית', 'Partly lit'],
+  3: ['מוצל', 'Shaded'],
+};
+const light = (k) => ({ lightLevel: k, light: LIGHT[k][0], en_light: LIGHT[k][1] });
+
 export const CORALS = [
-  // צמד צפון: רועי וגאיה
-  empty('c1', 'shark', 'north'),
-  empty('c2', 'dolphin', 'north'),
-  empty('c3', 'clownfish', 'north'),
-  // צמד דרום: מוריה ונעמה
-  empty('c4', 'octopus', 'south'),
-  empty('c5', 'whale', 'south'),
-  empty('c6', 'turtle', 'south'),
+  // צמד צפון: רועי וגאיה — דולפין, תמנון, צב
+  {
+    ...empty('c1', 'dolphin', 'north'), found: true,
+    lat: [29, 30.085], lon: [34, 55.047], depth: 5.9,
+    form: 'מסיבי, דמוי מוח (מאנדרואידי), מושבה קטנה', en_form: 'Massive, brain-like (meandroid), a small colony',
+    color: 'קרם בהיר', en_color: 'Pale cream', colorHex: '#8F8D83',
+    sizeCm: [8, null, null], surfaceCm2: dome(8), volumeCm3: domeVol(8),
+    holes: 16, day: { time: '', tested: 12, active: 7 },
+    ...light(2),
+    substrate: 'מדרון שונית סלעי, עם דרדרת ואצות שטיח', en_substrate: 'Rocky reef slope with rubble and turf algae',
+    notes: 'גודל ייחוס כ־8 ס״מ (מול אצבע). בלוח נרשם אזימוט 120°.',
+    en_notes: 'Reference size about 8 cm (against a finger). The slate records a bearing of 120°.',
+    cover: 7,          // התמונה בכרטיס
+    photos: shots('dolphin', 29),
+    model3d: 'assets/models/dolphin.glb',
+  },
+  {
+    ...empty('c2', 'octopus', 'north'), found: true,
+    lat: [29, 30.086], lon: [34, 55.046], depth: 5.2,
+    form: 'מסיבי, דמוי מוח, מוארך ומפותל', en_form: 'Massive, brain-like, elongated and winding',
+    color: 'קרם־בז׳', en_color: 'Cream-beige', colorHex: '#938E7F',
+    sizeCm: [15, null, null], surfaceCm2: dome(15), volumeCm3: domeVol(15),
+    holes: 20, day: { time: '', tested: 20, active: 14 },
+    ...light(1),
+    substrate: 'סלע שונית עם ספוגים כתומים מצפים', en_substrate: 'Reef rock with orange encrusting sponges',
+    notes: 'גודל ייחוס כ־15 ס״מ. בלוח נרשם אזימוט 120°.',
+    en_notes: 'Reference size about 15 cm. The slate records a bearing of 120°.',
+    cover: 9,          // התמונה בכרטיס
+    photos: shots('octopus', 27),
+    model3d: 'assets/models/octopus.glb',
+  },
+  {
+    ...empty('c3', 'turtle', 'north'), found: true,
+    lat: [29, 30.093], lon: [34, 55.051], depth: 4.7,
+    form: 'מסיבי, אונות מפותלות, מושבה גדולה', en_form: 'Massive with winding lobes, a large colony',
+    color: 'חום־צהבהב (אוקר)', en_color: 'Tan-ochre', colorHex: '#887E6D',
+    sizeCm: [20, null, null], surfaceCm2: dome(20), volumeCm3: domeVol(20),
+    holes: 46, day: { time: '', tested: 31, active: 19 },
+    ...light(1),
+    substrate: 'משטח חול ודרדרת בין סלעים', en_substrate: 'Sand and rubble flat between rocks',
+    notes: 'גודל ייחוס כ־20 ס״מ. בלוח נרשם אזימוט 130°.',
+    en_notes: 'Reference size about 20 cm. The slate records a bearing of 130°.',
+    cover: 10,          // התמונה בכרטיס
+    photos: shots('turtle', 69, { ...range(34, 53, ['בדיקת פלואורסצאין', 'Fluorescein test']), ...range(54, 55, ['המצוף מעל האלמוג', 'The float above the coral']) }),
+    model3d: '',
+  },
+  // צמד דרום: מוריה ונעמה — לוויתן, דג ליצן
+  {
+    ...empty('c4', 'whale', 'south'), found: true,
+    lat: [29, 30.084], lon: [34, 55.044], depth: 8,
+    form: 'מסיבי, דמוי מוח, אונות עגולות', en_form: 'Massive, brain-like, rounded lobes',
+    color: 'צהוב־קרם', en_color: 'Yellow-cream', colorHex: '#8A958A',
+    sizeCm: [15, null, null], surfaceCm2: dome(15), volumeCm3: domeVol(15),
+    holes: 33, day: { time: '', tested: 11, active: 7 },
+    ...light(1),
+    substrate: 'משטח דרדרת וחול', en_substrate: 'Rubble and sand flat',
+    notes: 'גודל ייחוס כ־15 ס״מ.',
+    en_notes: 'Reference size about 15 cm.',
+    cover: 13,          // התמונה בכרטיס
+    photos: shots('whale', 14),
+    model3d: '',
+  },
+  {
+    ...empty('c5', 'clownfish', 'south'), found: true,
+    lat: [29, 30.084], lon: [34, 55.045], depth: 5.8,
+    form: 'מסיבי, דמוי מוח, שתי אונות', en_form: 'Massive, brain-like, two lobes',
+    color: 'צהוב־קרם', en_color: 'Yellow-cream', colorHex: '#A3A08D',
+    sizeCm: [23, null, null], surfaceCm2: dome(23), volumeCm3: domeVol(23),
+    holes: 36, day: { time: '', tested: 11, active: 8 },
+    ...light(1),
+    substrate: 'סלע שונית עם ספוגים כתומים, ליד אלמוגים מסתעפים', en_substrate: 'Reef rock with orange sponges, next to branching corals',
+    notes: 'גודל ייחוס כ־23 ס״מ.',
+    en_notes: 'Reference size about 23 cm.',
+    cover: 6,          // התמונה בכרטיס
+    photos: shots('clownfish', 10),
+    model3d: '',
+  },
 ];
 
+// המצוף שלא היה בשימוש. The float that was not used.
+export const UNUSED_FLOATS = ['shark'];
+
+// תמונות הצוות. Team photos (assets/photos/teamN-*, teamS-*).
+export const TEAM_PHOTOS = {
+  north: shots('teamN', 24),
+  south: shots('teamS', 25),
+};
+
 // מסקנות, אחרי ניתוח הנתונים. Conclusions, after the analysis.
+// מסקנות ראשונות מצלילת היום. יעודכנו אחרי צלילת הלילה.
+// First conclusions from the day dive. To be updated after the night dive.
 export const CONCLUSIONS = {
-  he: [],
-  en: [],
+  he: [
+    'מצאנו וסימנו חמישה אלמוגים עם צדפות קודחות, כולם מושבות מסיביות דמויות מוח, בעומק 4.7–8 מ׳.',
+    'ספרנו 151 חורים. בדקנו בפלואורסצאין 85 מהם, ו־55 היו פעילים: 65% מהצדפות שנבדקו סיננו ביום.',
+    'הצפיפות הגבוהה ביותר הייתה במושבה הקטנה ביותר, הדולפין: כ־16 חורים ל־100 סמ״ר, לעומת 4–9 במושבות הגדולות.',
+    'הדולפין היה גם האלמוג היחיד במקום מואר חלקית, ושם אחוז הפעילות ביום היה הנמוך ביותר (58%). עם חמישה אלמוגים זה כיוון לבדיקה, לא מסקנה.',
+    'השוואת יום ולילה תתאפשר אחרי צלילת הלילה.',
+  ],
+  en: [
+    'We found and marked five corals with boring bivalves, all massive brain-like colonies, 4.7–8 m deep.',
+    'We counted 151 holes. We tested 85 of them with fluorescein, and 55 were active: 65% of the bivalves we tested were filtering by day.',
+    'The densest colony was the smallest one, the dolphin: about 16 holes per 100 cm², against 4–9 on the larger colonies.',
+    'The dolphin was also the only coral in a partly lit spot, and it had the lowest day activity (58%). With five corals this is a lead to check, not a conclusion.',
+    'Comparing day and night will be possible after the night dive.',
+  ],
 };
 
 // מה למדנו על סימון קצר־טווח מתחת למים ועל עבודה עם יצורים חיים

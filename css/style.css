@@ -804,3 +804,46 @@ dialog { color: var(--ink); }
   .stats-big { grid-template-columns: 1fr 1fr; }
   .zlabel { font-size: 11px; }
 }
+
+/* coral panel: coral model / float switch, colour swatch, longer galleries */
+.seg { display: inline-flex; border: 1px solid var(--rule); margin-bottom: 8px; }
+.seg button { font: 500 var(--s-1) var(--sans); padding: 6px 12px; border: 0; background: transparent; color: var(--ink-2); cursor: pointer; }
+.seg button + button { border-inline-start: 1px solid var(--rule); }
+.seg button[aria-pressed="true"] { background: var(--ink); color: var(--paper); }
+.swatch { display: inline-block; width: 14px; height: 14px; border: 1px solid var(--rule); vertical-align: -2px; margin-inline-end: 6px; }
+.gallery button { position: relative; }
+.g-cap { position: absolute; inset-inline: 0; bottom: 0; padding: 2px 4px; font-size: 10px; line-height: 1.3; background: rgba(0, 0, 0, .55); color: #fff; text-align: start; }
+.btn-more { margin-top: 8px; }
+.viewer figcaption .est { display: block; margin-top: 4px; }
+.chart .c-in { font: 600 12px var(--sans); fill: #fff; }
+.chart .c-in-dark { fill: var(--ink-2); }
+.chart .c-untested { fill: none; stroke: var(--ink-2); stroke-width: 1; stroke-dasharray: 3 2; }
+.chart .c-dot { font: 500 11px var(--sans); fill: var(--ink-2); }
+
+/* photo slides */
+.ph-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 8px; margin-top: 12px; }
+.ph-grid.ph-few { grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
+.ph-grid.ph-one { grid-template-columns: minmax(0, 640px); justify-content: center; }
+.ph-grid button { position: relative; padding: 0; border: 0; background: var(--paper-2); cursor: zoom-in; }
+.ph-grid img { display: block; width: 100%; aspect-ratio: 4 / 3; object-fit: cover; }
+.ph-grid .g-cap { font-size: 11px; padding: 3px 6px; }
+
+/* coral cards slide */
+.ccards { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; margin-top: 12px; }
+.ccard { border: 1px solid var(--rule); border-top: 4px solid var(--pair); background: var(--paper); display: flex; flex-direction: column; }
+.ccard img { display: block; width: 100%; aspect-ratio: 4 / 3; object-fit: cover; }
+.ccard-h { display: flex; align-items: center; gap: 8px; padding: 8px 10px 0; }
+.ccard-h h3 { margin: 0; font: 600 var(--s1, 17px) var(--serif); }
+.ccard dl { display: grid; grid-template-columns: auto 1fr; gap: 2px 10px; margin: 8px 10px 10px; font-size: var(--s-1); }
+.ccard dt { color: var(--ink-2); }
+.ccard dd { margin: 0; font-variant-numeric: tabular-nums; }
+.ccard .go { margin: auto 10px 10px; align-self: flex-start; }
+.gallery.gallery-grid { grid-auto-flow: row; grid-template-columns: repeat(3, 1fr); grid-auto-columns: auto; overflow: visible; gap: 6px; }
+.minis { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 12px 20px; margin-top: 8px; }
+.mini { margin: 0; }
+.mini figcaption { font-size: var(--s-1); color: var(--ink-2); margin-bottom: 2px; }
+.mini figcaption b { color: var(--ink); font-weight: 600; }
+.mini .chart text { font-size: 22px; }
+.mini .chart .c-name { font-size: 22px; }
+.slide-coralTable .legtable th { font-size: 12px; line-height: 1.25; vertical-align: bottom; }
+.slide-coralTable .table-wrap { overflow-x: auto; }
